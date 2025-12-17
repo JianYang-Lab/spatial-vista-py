@@ -3,7 +3,7 @@ import type { OrbitViewState, OrthographicViewState } from "@deck.gl/core";
 // Annotation types define
 
 // TODO: fetch laz file from a config or API
-export const LAZ_SAMPLE = "/files/data/points.laz";
+// export const LAZ_SAMPLE = "/files/data/points.laz";
 
 // TODO: fetch trait list form API
 export const TRAIT_GROUPS = [

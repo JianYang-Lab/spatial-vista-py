@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { Device } from "@luma.gl/core";
 
 // Hooks
@@ -19,6 +19,8 @@ import { TraitSelectionDialog } from "../components/dialogs/TraitSelectionDialog
 import { AnnotationSelectionDialog } from "../components/dialogs/AnnotationSelectionDialog";
 import { ColorPickerDialog } from "../components/dialogs/ColorPickerDialog";
 
+import { useWidgetModel } from "@/widget_context";
+
 export default function Vis({
   onLoad,
   device,
@@ -36,7 +38,58 @@ export default function Vis({
 
   // View States Hook
   const viewStates = useViewStates(); // Will be updated by data manager
+  const model = useWidgetModel();
+  const [lazUrl, setLazUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    let currentUrl: string | null = null;
+
+    const handler = () => {
+      const bytes = model.get("laz_bytes");
+      if (!bytes) return;
+
+      console.log(
+        "Vis: received laz_bytes from model, byte length:",
+        bytes?.length,
+      );
+
+      const blob = new Blob([bytes], { type: "application/octet-stream" });
+
+      if (currentUrl) {
+        console.log("Vis: revoking previous object URL:", currentUrl);
+        URL.revokeObjectURL(currentUrl);
+      }
+      currentUrl = URL.createObjectURL(blob);
+
+      console.log("Vis: created object URL for blob:", currentUrl);
+      setLazUrl(currentUrl);
+    };
+
+    model.on("change:laz_bytes", handler);
+    handler(); // 处理初始化时已经有数据的情况
+
+    return () => {
+      model.off("change:laz_bytes", handler);
+      if (currentUrl) {
+        console.log("Vis: cleanup revoking object URL:", currentUrl);
+        URL.revokeObjectURL(currentUrl);
+      }
+    };
+  }, [model]);
+
+  useEffect(() => {
+    if (!lazUrl) return;
+
+    (window as any).__SPATIALVISTA_LAZURL__ = lazUrl;
+    console.log("Expose lazUrl:", lazUrl);
+    // Additional debug: print a short sample of the url string and current loadedData state
+    try {
+      console.log("Vis debug - lazUrl preview:", lazUrl.slice?.(0, 120));
+    } catch (e) {
+      console.log("Vis debug - lazUrl preview failed", e);
+    }
+    console.log("Vis debug - current loadedData exists:", !!loadedData);
+  }, [lazUrl]);
   // Data Manager Hook
   const {
     isLoaded,
@@ -48,6 +101,7 @@ export default function Vis({
     loadAnnotation,
     loadTrait,
     clearAnnotation,
+    setLoadedData,
   } = useDataManager({
     onLoad,
     setCategoryColors: (colors) => setCategoryColorsRef.current(colors),
@@ -58,6 +112,16 @@ export default function Vis({
   useEffect(() => {
     viewStates.setIsLoaded?.(isLoaded);
   }, [isLoaded, viewStates]);
+
+  useEffect(() => {
+    if (lazUrl) {
+      console.log(
+        "Vis: lazUrl changed — clearing loadedData so DeckGL will reload from URL",
+        lazUrl,
+      );
+      setLoadedData(null);
+    }
+  }, [lazUrl, setLoadedData]);
 
   // Annotation States Hook
   const annotationStates = useAnnotationStates(loadedData!, currentTrait);
@@ -198,6 +262,7 @@ export default function Vis({
     layoutMode: viewStates.layoutMode,
     FancyPositions: layoutMode.FancyPositions,
     colorParams,
+    lazUrl,
   });
 
   return (
@@ -238,7 +303,7 @@ export default function Vis({
         </div>
 
         {/* Visualization Area */}
-        <div className="flex-1 min-w-0 h-full relative lg:w-[70%]">
+        <div className="flex-1 min-w-0 h-90% relative lg:w-[70%]">
           <VisualizationArea
             isLoaded={isLoaded}
             showPointCloud={uiStates.showPointCloud}

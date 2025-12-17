@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { type AnnotationType, ANNOTATION_CONFIG } from "../config/annotations";
 import type { CategoryColors, LASMesh, LoadedData } from "../types";
-import { INITIAL_VIEW_STATE, LAZ_SAMPLE } from "../config/constants";
+import { INITIAL_VIEW_STATE } from "../config/constants";
 
-import { logger } from "@/utils/tauri";
+// import { logger } from "@/utils/tauri";
 
 interface UseDataManagerProps {
   onLoad?: (data: { count: number; progress: number }) => void;
@@ -34,13 +34,13 @@ export const useDataManager = ({
   >(new Set([ANNOTATION_CONFIG.defaultType]));
 
   // TODO(wangkai) test logger
-  useEffect(() => {
-    let load_laz = async () => {
-      logger.info(`load path: ${LAZ_SAMPLE}`);
-    };
+  // useEffect(() => {
+  //   let load_laz = async () => {
+  //     logger.info(`load path: ${LAZ_SAMPLE}`);
+  //   };
 
-    load_laz();
-  }, []);
+  //   load_laz();
+  // }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onDataLoad = useCallback((data: any) => {
@@ -256,5 +256,6 @@ export const useDataManager = ({
     loadAnnotation,
     loadTrait,
     clearAnnotation,
+    setLoadedData,
   };
 };

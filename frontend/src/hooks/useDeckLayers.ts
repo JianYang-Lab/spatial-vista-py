@@ -7,7 +7,6 @@ import {
   calculatePointColor,
   type ColorCalculatorParams,
 } from "../utils/colorCalculator";
-import { LAZ_SAMPLE } from "../config/constants";
 import { LASWorkerLoader } from "@loaders.gl/las";
 // import lasWorkerUrl from "@/workers/las-worker?worker&url";
 
@@ -27,6 +26,7 @@ interface UseDeckLayersProps {
   layoutMode: LayoutMode;
   FancyPositions: Float32Array | null;
   colorParams: ColorCalculatorParams;
+  lazUrl: string | null;
 }
 
 export const useDeckLayers = ({
@@ -43,16 +43,33 @@ export const useDeckLayers = ({
   layoutMode,
   FancyPositions,
   colorParams,
+  lazUrl,
 }: UseDeckLayersProps): LayersList => {
   return useMemo(() => {
+    // Prefer using parsed loadedData over lazUrl so the layer uses the already-parsed object
+    // once it becomes available (avoid re-parsing the blob URL).
+    const dataSource = loadedData || lazUrl;
+    // Attach onDataLoad only when the dataSource is a URL/string and an onDataLoad handler exists.
+    // If dataSource is the parsed object (`loadedData`), do NOT attach onDataLoad.
+    const shouldUseOnDataLoad = typeof dataSource === "string" && !!onDataLoad;
+
+    // console.log(
+    //   "useDeckLayers: dataSourceType",
+    //   typeof dataSource,
+    //   "lazUrl",
+    //   lazUrl,
+    //   "loadedDataExists",
+    //   !!loadedData,
+    // );
+
     const layersList: LayersList = [];
 
     if (showPointCloud) {
       layersList.push(
         new PointCloudLayer({
           id: "laz-point-cloud-layer",
-          data: loadedData || LAZ_SAMPLE,
-          onDataLoad: loadedData ? null : onDataLoad,
+          data: dataSource,
+          onDataLoad: shouldUseOnDataLoad ? onDataLoad : null,
           visible: showPointCloud,
           colorFormat: "RGBA",
           getNormal: [0, 1, 0],
@@ -184,5 +201,6 @@ export const useDeckLayers = ({
     layoutMode,
     FancyPositions,
     colorParams,
+    lazUrl,
   ]);
 };
