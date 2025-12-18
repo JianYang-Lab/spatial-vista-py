@@ -2,7 +2,7 @@ import { useState } from "react";
 
 export interface UseUIStatesReturn {
   // Dialog states
-  traitOpen: boolean;
+  continuousOpen: boolean;
   annotationOpen: boolean;
   colorPickerOpen: boolean;
 
@@ -13,22 +13,22 @@ export interface UseUIStatesReturn {
   // Point controls
   pointSize: number;
   pointOpacity: number;
-  logpThreshold: number;
+  NumericThreshold: number;
 
   // Actions
-  setTraitOpen: (open: boolean) => void;
+  setContinuousOpen: (open: boolean) => void;
   setAnnotationOpen: (open: boolean) => void;
   setColorPickerOpen: (open: boolean) => void;
   setshowPointCloud: (show: boolean) => void;
   setShowScatterplot: (show: boolean) => void;
   setPointSize: (size: number) => void;
   setPointOpacity: (opacity: number) => void;
-  setLogpThreshold: (threshold: number) => void;
+  setNumericThreshold: (threshold: number) => void;
 }
 
 export const useUIStates = (): UseUIStatesReturn => {
   // Dialog states
-  const [traitOpen, setTraitOpen] = useState<boolean>(false);
+  const [continuousOpen, setContinuousOpen] = useState<boolean>(false);
   const [annotationOpen, setAnnotationOpen] = useState<boolean>(false);
   const [colorPickerOpen, setColorPickerOpen] = useState<boolean>(false);
 
@@ -39,24 +39,24 @@ export const useUIStates = (): UseUIStatesReturn => {
   // Point controls
   const [pointSize, setPointSize] = useState<number>(1);
   const [pointOpacity, setPointOpacity] = useState<number>(1);
-  const [logpThreshold, setLogpThreshold] = useState<number>(0);
+  const [NumericThreshold, setNumericThreshold] = useState<number>(0);
 
   return {
-    traitOpen,
+    continuousOpen,
     annotationOpen,
     colorPickerOpen,
     showPointCloud,
     showScatterplot,
     pointSize,
     pointOpacity,
-    logpThreshold,
-    setTraitOpen,
+    NumericThreshold,
+    setContinuousOpen,
     setAnnotationOpen,
     setColorPickerOpen,
     setshowPointCloud,
     setShowScatterplot,
     setPointSize,
     setPointOpacity,
-    setLogpThreshold,
+    setNumericThreshold,
   };
 };

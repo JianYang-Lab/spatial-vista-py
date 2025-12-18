@@ -13,13 +13,13 @@ import {
 interface AppHeaderProps {
   // States
   isLoaded: boolean;
-  currentTrait: string | null;
+  // currentNumericName: string | null;
   // coloringAnnotation: AnnotationType;
   // selectedCategories: Record<AnnotationType, number | null>;
   showPointCloud: boolean;
 
   // Handlers
-  onTraitOpen: () => void;
+  onContinuousOpen: () => void;
   onAnnotationOpen: () => void;
   onToggleView: () => void;
   onCapture: () => void;
@@ -28,7 +28,7 @@ interface AppHeaderProps {
 export const VisHeader: React.FC<AppHeaderProps> = ({
   isLoaded,
   showPointCloud,
-  onTraitOpen,
+  onContinuousOpen,
   // onAnnotationOpen,
   onToggleView,
   onCapture,
@@ -41,11 +41,11 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={onTraitOpen}
+            onClick={onContinuousOpen}
             disabled={!isLoaded}
           >
             <SearchIcon className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Query Trait</span>
+            <span className="hidden sm:inline ml-1">Query Continuous</span>
           </Button>
 
           {/*<Button

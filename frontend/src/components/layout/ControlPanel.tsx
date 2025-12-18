@@ -48,7 +48,7 @@ interface ControlPanelProps {
   // Point controls
   pointSize: number;
   pointOpacity: number;
-  logpThreshold: number;
+  NumericThreshold: number;
   minMaxLogp: [number, number] | null;
 
   // Chart data
@@ -68,7 +68,7 @@ interface ControlPanelProps {
   onResetCamera: () => void;
   onPointSizeChange: (size: number) => void;
   onPointOpacityChange: (opacity: number) => void;
-  onLogpThresholdChange: (threshold: number) => void;
+  onNumericThresholdChange: (threshold: number) => void;
   onResetPointControls: () => void;
   onViewStateUpdate: (viewState: OrbitViewState) => void;
 }

@@ -4,6 +4,13 @@ import { INITIAL_VIEW_STATE } from "../config/constants";
 
 type AnnotationType = string;
 
+type NumericField = {
+  name: string;
+  values: Float32Array;
+  min: number;
+  max: number;
+};
+
 interface UseDataManagerProps {
   onLoad?: (data: { count: number; progress: number }) => void;
   // setCategoryColors: (
@@ -29,14 +36,19 @@ export const useDataManager = ({
 }: UseDataManagerProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadedData, setLoadedData] = useState<LoadedData | null>(null);
-  const [currentTrait, setCurrentTrait] = useState<string | null>(null);
-  const [minMaxLogp, setMinMaxLogp] = useState<[number, number] | null>(null);
+  // const [currentTrait, setCurrentTrait] = useState<string | null>(null);
+  // const [minMaxLogp, setMinMaxLogp] = useState<[number, number] | null>(null);
+  const [numericField, setNumericField] = useState<{
+    name: string;
+    values: Float32Array;
+    min: number;
+    max: number;
+  } | null>(null);
 
   const [loadedAnnotations, setLoadedAnnotations] = useState<
     Set<AnnotationType>
   >(new Set());
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onDataLoad = useCallback(
     (data: any) => {
       console.time("Data load");
@@ -59,9 +71,12 @@ export const useDataManager = ({
       // logP/other annos will be loaded dynamically later
       (data as LoadedData).extData = {
         originalColor,
-        logPs: null,
-        minLogP: null,
-        maxLogP: null,
+        numeric: null as null | {
+          name: string;
+          values: Float32Array;
+          min: number;
+          max: number;
+        },
         annotations: defaultAnnIds ? { [defaultAnnoType]: defaultAnnIds } : {},
         POSITION: data.attributes.POSITION,
       };
@@ -98,7 +113,7 @@ export const useDataManager = ({
       }
 
       // NOT load trait by default
-      loadTrait(null, data);
+      // loadTrait(null, data);
       console.timeEnd("Data load");
     },
     [annotationConfig],
@@ -176,46 +191,6 @@ export const useDataManager = ({
     // annotations are preloaded via widget
   }, []);
 
-  const loadTrait = useCallback(
-    async (trait: string | null, dataObj?: LoadedData) => {
-      const targetData = dataObj || loadedData;
-      if (!targetData) return;
-
-      const extData = targetData.extData;
-
-      if (!trait) {
-        // clear current trait
-        extData.logPs = null;
-        extData.minLogP = null;
-        extData.maxLogP = null;
-        setCurrentTrait(null);
-        setMinMaxLogp(null);
-        return;
-      }
-
-      const url = `${trait}.bin`;
-      const resp = await fetch(url);
-      const buf = await resp.arrayBuffer();
-      const arr = new Float32Array(buf);
-
-      let minLogP = Infinity,
-        maxLogP = -Infinity;
-      for (const v of arr) {
-        if (v < minLogP) minLogP = v;
-        if (v > maxLogP) maxLogP = v;
-      }
-
-      extData.logPs = arr;
-      extData.minLogP = minLogP;
-      extData.maxLogP = maxLogP;
-      setCurrentTrait(trait);
-
-      // save min/max logP for threshold slider
-      setMinMaxLogp([minLogP, maxLogP]);
-    },
-    [loadedData],
-  );
-
   const clearAnnotation = useCallback(
     (type: AnnotationType) => {
       // NOT clear default annotation
@@ -236,15 +211,41 @@ export const useDataManager = ({
     [loadedData, loadedAnnotations],
   );
 
+  const loadNumericField = useCallback(
+    (
+      field: {
+        name: string;
+        values: Float32Array;
+        min: number;
+        max: number;
+      } | null,
+      dataObj?: LoadedData,
+    ) => {
+      const targetData = dataObj || loadedData;
+      if (!targetData) return;
+
+      if (!field) {
+        targetData.extData.numeric = null;
+        setNumericField(null);
+        setLoadedData({ ...targetData }); // ⭐
+        return;
+      }
+
+      targetData.extData.numeric = field;
+      setNumericField(field);
+      setLoadedData({ ...targetData }); // ⭐
+    },
+    [loadedData],
+  );
+
   return {
     isLoaded,
     loadedData,
     loadedAnnotations,
-    currentTrait,
-    minMaxLogp,
+    loadNumericField,
     onDataLoad,
+    numericField,
     loadAnnotation,
-    loadTrait,
     clearAnnotation,
     setLoadedData,
   };

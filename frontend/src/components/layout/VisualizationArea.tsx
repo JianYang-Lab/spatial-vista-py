@@ -33,16 +33,21 @@ interface VisualizationAreaProps {
   layers: LayersList;
   loadedData: any;
   loadedAnnotations: Set<AnnotationType>;
-  currentTrait: string | null;
-
+  // currentTrait: string | null;
+  activeContinuous: string | null;
+  numericField: {
+    name: string;
+    min: number;
+    max: number;
+  } | null;
   // Section carousel props
   availableSectionIDs: number[];
   currentSectionID: number;
   sectionPreviews: Record<number, string>;
 
   // LogP controls props
-  logpThreshold: number;
-  minMaxLogp: [number, number] | null;
+  NumericThreshold: number;
+  minMaxValue: [number, number] | null;
 
   // Device
   device?: Device;
@@ -52,7 +57,7 @@ interface VisualizationAreaProps {
   onStViewStateUpdate: (viewState: OrthographicViewState) => void;
   onActiveZoomChange: (zoom: string) => void;
   onSectionClick: (sectionID: number) => void;
-  onLogpThresholdChange: (threshold: number) => void;
+  onNumericThresholdChange: (threshold: number) => void;
   onAfterRender: ({ gl }: { gl: WebGLRenderingContext }) => void;
 }
 
@@ -67,18 +72,19 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   layers,
   loadedData,
   loadedAnnotations,
-  currentTrait,
+  activeContinuous,
+  numericField,
   availableSectionIDs,
   currentSectionID,
   sectionPreviews,
-  logpThreshold,
-  minMaxLogp,
+  NumericThreshold,
+  minMaxValue: minMaxValue,
   device,
   onViewStateUpdate,
   onStViewStateUpdate,
   onActiveZoomChange,
   onSectionClick,
-  onLogpThresholdChange,
+  onNumericThresholdChange,
   onAfterRender,
 }) => {
   const deckRef = useRef<any>(null);
@@ -152,11 +158,18 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         }
       }
 
-      // if trait loaded, show logP
-      const logps = extData.logPs;
-      if (currentTrait && logps) {
-        const logp = logps[index] !== undefined ? logps[index] : "N/A";
-        tooltipContent += `<b>LogP:</b> ${logp}`;
+      if (
+        extData.numeric &&
+        extData.numeric.values &&
+        index < extData.numeric.values.length
+      ) {
+        const v = extData.numeric.values[index];
+
+        if (typeof v === "number" && Number.isFinite(v)) {
+          tooltipContent += `<b>${extData.numeric.name}:</b> ${v.toFixed(
+            4,
+          )}<br/>`;
+        }
       }
 
       tooltipContent += `</div>`;
@@ -170,14 +183,14 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         },
       };
     },
-    [loadedData, loadedAnnotations, currentTrait],
+    [loadedData, loadedAnnotations],
   );
 
   const handleLogpReset = useCallback(() => {
-    if (minMaxLogp) {
-      onLogpThresholdChange(minMaxLogp[0]);
+    if (minMaxValue) {
+      onNumericThresholdChange(minMaxValue[0]);
     }
-  }, [minMaxLogp, onLogpThresholdChange]);
+  }, [minMaxValue, onNumericThresholdChange]);
 
   return (
     <>
@@ -229,20 +242,23 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
       )}
 
       {/* LogP Controls */}
-      {currentTrait && minMaxLogp && (
-        <div
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2  bg-transparent rounded-lg shadow-lg p-1.5 z-20 pl-3 pr-3"
-          style={{ minWidth: "80%", backdropFilter: "blur(8px)" }}
-        >
-          <LogpControls
-            logpThreshold={logpThreshold}
-            minMaxLogp={minMaxLogp}
-            isLoaded={isLoaded}
-            onThresholdChange={onLogpThresholdChange}
-            onReset={handleLogpReset}
-          />
-        </div>
-      )}
+      {numericField &&
+        minMaxValue &&
+        Number.isFinite(minMaxValue[0]) &&
+        Number.isFinite(minMaxValue[1]) && (
+          <div
+            className="absolute bottom-4 left-1/2 transform -translate-x-1/2  bg-transparent rounded-lg shadow-lg p-1.5 z-20 pl-3 pr-3"
+            style={{ minWidth: "80%", backdropFilter: "blur(8px)" }}
+          >
+            <LogpControls
+              NumericThreshold={NumericThreshold}
+              minMaxLogp={minMaxValue}
+              isLoaded={isLoaded}
+              onThresholdChange={onNumericThresholdChange}
+              onReset={handleLogpReset}
+            />
+          </div>
+        )}
     </>
   );
 };
@@ -262,7 +278,7 @@ const LoadingOverlay: React.FC = () => (
 
 // LogP Controls Sub-component
 interface LogpControlsProps {
-  logpThreshold: number;
+  NumericThreshold: number;
   minMaxLogp: [number, number];
   isLoaded: boolean;
   onThresholdChange: (threshold: number) => void;
@@ -270,7 +286,7 @@ interface LogpControlsProps {
 }
 
 const LogpControls: React.FC<LogpControlsProps> = ({
-  logpThreshold,
+  NumericThreshold,
   minMaxLogp,
   isLoaded,
   onThresholdChange,
@@ -279,7 +295,7 @@ const LogpControls: React.FC<LogpControlsProps> = ({
   <div className="flex items-center space-x-3">
     {/* LogP Threshold label and value */}
     <div className="text-sm font-medium whitespace-nowrap">
-      LogP: <span className="font-bold">{logpThreshold.toFixed(2)}</span>
+      LogP: <span className="font-bold">{NumericThreshold.toFixed(2)}</span>
     </div>
 
     {/* Min value */}
@@ -300,7 +316,7 @@ const LogpControls: React.FC<LogpControlsProps> = ({
         min={minMaxLogp[0]}
         max={minMaxLogp[1]}
         step={(minMaxLogp[1] - minMaxLogp[0]) / 100}
-        value={[logpThreshold]}
+        value={[NumericThreshold]}
         onValueChange={(values) => onThresholdChange(values[0])}
         disabled={!isLoaded}
         className="

@@ -34,11 +34,10 @@ export interface UseAnnotationStatesReturn {
 
 export const useAnnotationStates = (
   loadedData: LoadedData,
-  currentTrait: string | null,
   annotationConfig: any | null,
 ): UseAnnotationStatesReturn => {
   /* ----------------------------
-   * 1. 当前着色 annotation
+   * 1. coloring annotation
    * ---------------------------- */
   const [coloringAnnotation, setColoringAnnotation] =
     useState<AnnotationType | null>(null);
@@ -203,68 +202,10 @@ export const useAnnotationStates = (
   /* ----------------------------
    * 8. Pie chart
    * ---------------------------- */
-  const pieChartProps = useMemo<ChartProps | null>(() => {
-    if (!coloringAnnotation || !annotationConfig) return null;
-
-    const baseColors = categoryColors[coloringAnnotation] ?? {};
-    const overrides = Object.fromEntries(
-      Object.entries(customColors[coloringAnnotation] ?? {}).map(([k, v]) => [
-        Number(k),
-        hexToRgb(v),
-      ]),
-    );
-
-    return {
-      annotationType: coloringAnnotation,
-      annotationMap: annotationConfig.AnnoMaps[coloringAnnotation]?.Items ?? [],
-      colormap: { ...baseColors, ...overrides },
-      hiddenCategoryIds,
-      selectedCategory: selectedCategories[coloringAnnotation],
-      data: loadedData,
-    };
-  }, [
-    coloringAnnotation,
-    annotationConfig,
-    hiddenCategoryIds,
-    selectedCategories,
-    loadedData,
-    categoryColors,
-    customColors,
-  ]);
 
   /* ----------------------------
    * 9. LogP bar chart
    * ---------------------------- */
-  const logpBarChartProps = useMemo<LogpBarChartProps | null>(() => {
-    if (!coloringAnnotation || !annotationConfig) return null;
-
-    const baseColors = categoryColors[coloringAnnotation] ?? {};
-    const overrides = Object.fromEntries(
-      Object.entries(customColors[coloringAnnotation] ?? {}).map(([k, v]) => [
-        Number(k),
-        hexToRgb(v),
-      ]),
-    );
-
-    return {
-      annotationType: coloringAnnotation,
-      annotationMap: annotationConfig.AnnoMaps[coloringAnnotation]?.Items ?? [],
-      colormap: { ...baseColors, ...overrides },
-      hiddenCategoryIds,
-      selectedCategory: selectedCategories[coloringAnnotation],
-      currentTrait,
-      data: loadedData,
-    };
-  }, [
-    coloringAnnotation,
-    annotationConfig,
-    hiddenCategoryIds,
-    selectedCategories,
-    currentTrait,
-    loadedData,
-    categoryColors,
-    customColors,
-  ]);
 
   return {
     coloringAnnotation,
@@ -278,8 +219,6 @@ export const useAnnotationStates = (
     setCategoryColors,
     setCustomColors,
     setAnnotationForColoring,
-    pieChartProps,
-    logpBarChartProps,
     colorParams,
   };
 };

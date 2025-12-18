@@ -28,7 +28,7 @@ interface AnnotationPanelProps {
     Record<number, [number, number, number]>
   >;
   customColors: Record<AnnotationType, Record<number, string>>;
-  currentTrait: string | null;
+  currentNumericName: string | null;
   isLoaded: boolean;
 
   // Handlers
@@ -51,7 +51,7 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
   hiddenCategoryIds,
   categoryColors,
   customColors,
-  currentTrait,
+  currentNumericName: currentNumericName,
   isLoaded,
   onColorPickerOpen,
   onSetAnnotationForColoring,
@@ -173,7 +173,7 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
                   hiddenCategories={hiddenCategoryIds[type] || new Set()}
                   categoryColors={categoryColors[type] ?? {}}
                   customColors={customColors[type] ?? {}}
-                  currentTrait={currentTrait}
+                  currentNumericName={currentNumericName}
                   coloringAnnotation={coloringAnnotation}
                   onCategorySelect={handleCategorySelect}
                   onCategoryToggle={handleCategoryToggle}
@@ -200,7 +200,7 @@ interface CategoryListProps {
   hiddenCategories: Set<number>;
   categoryColors: Record<number, [number, number, number]>;
   customColors: Record<number, string>;
-  currentTrait: string | null;
+  currentNumericName: string | null;
   coloringAnnotation: AnnotationType;
   onCategorySelect: (type: AnnotationType, categoryId: number) => void;
   onCategoryToggle: (type: AnnotationType, categoryId: number) => void;
@@ -213,7 +213,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
   hiddenCategories,
   categoryColors,
   customColors,
-  currentTrait,
+  currentNumericName,
   coloringAnnotation,
   onCategorySelect,
   onCategoryToggle,
@@ -226,7 +226,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
 
         const isHidden = hiddenCategories.has(categoryId);
         const isActive = selectedCategory === categoryId;
-        const withTrait = currentTrait !== null;
+        const withTrait = currentNumericName !== null;
         const isColoringType = coloringAnnotation === type;
 
         const color = isColoringType

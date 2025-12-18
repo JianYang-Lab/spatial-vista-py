@@ -2,13 +2,12 @@ import { useMemo } from "react";
 import { PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import type { LayersList } from "@deck.gl/core";
-import type { LayoutMode, RGBAColor } from "../types";
+import type { LayoutMode, NumericField, RGBAColor } from "../types";
 import {
   calculatePointColor,
   type ColorCalculatorParams,
 } from "../utils/colorCalculator";
 import { LASWorkerLoader } from "@loaders.gl/las";
-// import lasWorkerUrl from "@/workers/las-worker?worker&url";
 
 interface UseDeckLayersProps {
   showPointCloud: boolean;
@@ -18,9 +17,12 @@ interface UseDeckLayersProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDataLoad?: (data: any) => void;
   filteredSectionPoints: number[];
-  currentTrait: string | null;
-  logpThreshold: number;
-  minMaxLogp: [number, number] | null;
+  NumericThreshold: number;
+  numericField: {
+    name: string;
+    min: number;
+    max: number;
+  } | null;
   pointOpacity: number;
   pointSize: number;
   layoutMode: LayoutMode;
@@ -35,9 +37,8 @@ export const useDeckLayers = ({
   loadedData,
   onDataLoad,
   filteredSectionPoints,
-  currentTrait,
-  logpThreshold,
-  minMaxLogp,
+  NumericThreshold,
+  numericField,
   pointOpacity,
   pointSize,
   layoutMode,
@@ -90,8 +91,8 @@ export const useDeckLayers = ({
           // },
           updateTriggers: {
             getColor: [
-              currentTrait,
-              logpThreshold,
+              numericField?.name,
+              NumericThreshold,
               colorParams.hiddenCategoryIds,
               colorParams.customColors,
               colorParams.coloringAnnotation,
@@ -135,6 +136,9 @@ export const useDeckLayers = ({
       );
     }
 
+    const minMaxValue: [number, number] | null =
+      numericField !== null ? [numericField.min, numericField.max] : null;
+
     if (showScatterplot && !showPointCloud && loadedData) {
       layersList.push(
         new ScatterplotLayer({
@@ -144,14 +148,14 @@ export const useDeckLayers = ({
 
           getFilterValue: (index: number) => {
             const extData = loadedData.extData;
-            if (!extData?.logPs) return logpThreshold + 1;
+            if (!extData?.logPs) return NumericThreshold + 1;
             return extData.logPs[index];
           },
 
-          filterRange: [logpThreshold, minMaxLogp?.[1] || 100],
+          filterRange: [NumericThreshold, minMaxValue?.[1] || 100],
           filterTransformColor: true,
           filterTransformSize: true,
-          filterEnabled: currentTrait !== null,
+          filterEnabled: !!numericField,
           visible: showScatterplot,
           pickable: true,
           opacity: pointOpacity,
@@ -180,8 +184,8 @@ export const useDeckLayers = ({
 
           updateTriggers: {
             getFillColor: [
-              currentTrait,
-              logpThreshold,
+              numericField?.name,
+              NumericThreshold,
               colorParams.hiddenCategoryIds,
               colorParams.customColors,
               colorParams.coloringAnnotation,
@@ -199,9 +203,8 @@ export const useDeckLayers = ({
     loadedData,
     onDataLoad,
     filteredSectionPoints,
-    currentTrait,
-    logpThreshold,
-    minMaxLogp,
+    NumericThreshold,
+    numericField,
     pointOpacity,
     pointSize,
     layoutMode,

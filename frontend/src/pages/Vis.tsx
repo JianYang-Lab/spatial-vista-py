@@ -15,7 +15,7 @@ import { VisHeader } from "../components/layout/VisHeader";
 import { AnnotationPanel } from "../components/layout/AnnotationPanel";
 import { ControlPanel } from "../components/layout/ControlPanel";
 import { VisualizationArea } from "../components/layout/VisualizationArea";
-import { TraitSelectionDialog } from "../components/dialogs/TraitSelectionDialog";
+import { ContinuousSelectionDialog } from "../components/dialogs/ContinuousSelectionDialog";
 import { ColorPickerDialog } from "../components/dialogs/ColorPickerDialog";
 
 import { useWidgetModel } from "@/widget_context";
@@ -45,6 +45,52 @@ export default function Vis({
   const [annotationBins, setAnnotationBins] = useState<
     Record<string, Uint8Array | Uint16Array>
   >({});
+
+  // NumericFiled Hook
+  type ContinuousField = {
+    name: string;
+    values: Float32Array;
+    min: number;
+    max: number;
+    source: string;
+  };
+
+  const [continuousFields, setContinuousFields] = useState<
+    Record<string, ContinuousField>
+  >({});
+
+  const [activeContinuous, setActiveContinuous] = useState<string | null>(null);
+  useEffect(() => {
+    if (!model) return;
+
+    const traits = model.get("continuous_traits");
+    const bins = model.get("continuous_bins");
+
+    if (!traits || !bins) return;
+
+    const parsed: Record<string, ContinuousField> = {};
+
+    for (const [name, meta] of Object.entries(traits)) {
+      const dv = bins[name] as DataView | undefined;
+      if (!dv) continue;
+
+      const values = new Float32Array(
+        dv.buffer,
+        dv.byteOffset,
+        dv.byteLength / 4,
+      );
+
+      parsed[name] = {
+        name,
+        values,
+        min: meta.Min,
+        max: meta.Max,
+        source: meta.Source,
+      };
+    }
+
+    setContinuousFields(parsed);
+  }, [model]);
 
   useEffect(() => {
     if (!model) return;
@@ -129,11 +175,10 @@ export default function Vis({
     isLoaded,
     loadedData,
     loadedAnnotations,
-    currentTrait,
-    minMaxLogp,
+    numericField,
+    loadNumericField,
     onDataLoad,
     loadAnnotation,
-    loadTrait,
     clearAnnotation,
   } = useDataManager({
     onLoad,
@@ -143,16 +188,45 @@ export default function Vis({
     annotationConfig,
     annotationBins,
   });
+
+  const handleSelectContinuous = useCallback(
+    (name: string | null) => {
+      setActiveContinuous(name);
+
+      if (!loadedData) return;
+
+      if (!name) {
+        loadNumericField(null, loadedData);
+        return;
+      }
+
+      const field = continuousFields[name];
+      if (!field) {
+        loadNumericField(null, loadedData);
+        return;
+      }
+
+      loadNumericField(
+        {
+          name: field.name,
+          values: field.values,
+          min: field.min,
+          max: field.max,
+        },
+        loadedData,
+      );
+
+      // 可选：切换字段时重置阈值
+      uiStates.setNumericThreshold(field.min);
+    },
+    [loadedData, continuousFields, loadNumericField, uiStates],
+  );
   useEffect(() => {
     viewStates.setIsLoaded?.(isLoaded);
   }, [isLoaded, viewStates]);
 
   // Annotation States Hook
-  const annotationStates = useAnnotationStates(
-    loadedData!,
-    currentTrait,
-    annotationConfig,
-  );
+  const annotationStates = useAnnotationStates(loadedData!, annotationConfig);
 
   // Section States Hook
   const sectionStates = useSectionStates(
@@ -166,7 +240,7 @@ export default function Vis({
   const layoutMode = useLayoutMode(
     viewStates.layoutMode,
     viewStates.setLayoutMode,
-    currentTrait,
+    activeContinuous,
     annotationStates.coloringAnnotation,
     loadedData,
     viewStates.initialCamera,
@@ -268,7 +342,7 @@ export default function Vis({
   // Dynamic layers with combined color params
   const colorParams = {
     ...annotationStates.colorParams,
-    logpThreshold: uiStates.logpThreshold,
+    NumericThreshold: uiStates.NumericThreshold,
   };
 
   const layers = useDeckLayers({
@@ -277,9 +351,8 @@ export default function Vis({
     loadedData,
     onDataLoad,
     filteredSectionPoints: sectionStates.filteredSectionPoints,
-    currentTrait,
-    logpThreshold: uiStates.logpThreshold,
-    minMaxLogp,
+    NumericThreshold: uiStates.NumericThreshold,
+    numericField,
     pointOpacity: uiStates.pointOpacity,
     pointSize: uiStates.pointSize,
     layoutMode: viewStates.layoutMode,
@@ -287,18 +360,19 @@ export default function Vis({
     colorParams,
     lazUrl,
   });
+  // [number, number] | null
+  const minMaxValue: [number, number] | null =
+    numericField !== null ? [numericField.min, numericField.max] : null;
 
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
       <VisHeader
         isLoaded={isLoaded}
-        currentTrait={currentTrait}
         coloringAnnotation={annotationStates.coloringAnnotation}
         selectedCategories={annotationStates.selectedCategories}
         showPointCloud={uiStates.showPointCloud}
-        onTraitOpen={() => uiStates.setTraitOpen(true)}
-        // onAnnotationOpen={() => uiStates.setAnnotationOpen(true)}
+        onContinuousOpen={() => uiStates.setContinuousOpen(true)}
         onToggleView={toggleDeckGLDisplay}
         onCapture={captureCurrentImage}
       />
@@ -314,7 +388,7 @@ export default function Vis({
             hiddenCategoryIds={annotationStates.hiddenCategoryIds}
             categoryColors={annotationStates.categoryColors}
             customColors={annotationStates.customColors}
-            currentTrait={currentTrait}
+            currentNumericName={activeContinuous}
             isLoaded={isLoaded}
             onColorPickerOpen={() => uiStates.setColorPickerOpen(true)}
             onSetAnnotationForColoring={
@@ -340,18 +414,20 @@ export default function Vis({
               layers={layers}
               loadedData={loadedData}
               loadedAnnotations={loadedAnnotations}
-              currentTrait={currentTrait}
+              // currentTrait={activeContinuous}
+              activeContinuous={activeContinuous}
+              numericField={numericField}
               availableSectionIDs={sectionStates.availableSectionIDs}
               currentSectionID={sectionStates.currentSectionID}
               sectionPreviews={sectionStates.sectionPreviews}
-              logpThreshold={uiStates.logpThreshold}
-              minMaxLogp={minMaxLogp}
+              NumericThreshold={uiStates.NumericThreshold}
+              minMaxValue={minMaxValue}
               device={device}
               onViewStateUpdate={viewStates.updateViewState}
               onStViewStateUpdate={viewStates.updateStviewState}
               onActiveZoomChange={viewStates.setActiveZoom}
               onSectionClick={sectionStates.handleSectionClick}
-              onLogpThresholdChange={uiStates.setLogpThreshold}
+              onNumericThresholdChange={uiStates.setNumericThreshold}
               onAfterRender={handleAfterRender}
             />
           }
@@ -367,10 +443,10 @@ export default function Vis({
             initialCamera={viewStates.initialCamera}
             pointSize={uiStates.pointSize}
             pointOpacity={uiStates.pointOpacity}
-            logpThreshold={uiStates.logpThreshold}
-            minMaxLogp={minMaxLogp}
+            NumericThreshold={uiStates.NumericThreshold}
+            minMaxLogp={minMaxValue}
             isLoaded={isLoaded}
-            currentTrait={currentTrait}
+            currentTrait={activeContinuous}
             coloringAnnotation={annotationStates.coloringAnnotation}
             selectedCategories={annotationStates.selectedCategories}
             onZoomChange={viewStates.setActiveZoom}
@@ -385,11 +461,11 @@ export default function Vis({
             }}
             onPointSizeChange={uiStates.setPointSize}
             onPointOpacityChange={uiStates.setPointOpacity}
-            onLogpThresholdChange={uiStates.setLogpThreshold}
+            onNumericThresholdChange={uiStates.setNumericThreshold}
             onResetPointControls={() => {
               uiStates.setPointSize(1);
               uiStates.setPointOpacity(1);
-              uiStates.setLogpThreshold(minMaxLogp ? minMaxLogp[0] : 0);
+              uiStates.setNumericThreshold(minMaxValue ? minMaxValue[0] : 0);
             }}
             onViewStateUpdate={viewStates.updateViewState}
           />
@@ -397,11 +473,12 @@ export default function Vis({
       </div>
 
       {/* Dialogs */}
-      <TraitSelectionDialog
-        open={uiStates.traitOpen}
-        currentTrait={currentTrait}
-        onOpenChange={uiStates.setTraitOpen}
-        onLoadTrait={loadTrait}
+      <ContinuousSelectionDialog
+        open={uiStates.continuousOpen} // 可以之后改名
+        activeContinuous={activeContinuous}
+        continuousFields={continuousFields}
+        onOpenChange={uiStates.setContinuousOpen}
+        onSelectContinuous={handleSelectContinuous}
       />
 
       <ColorPickerDialog

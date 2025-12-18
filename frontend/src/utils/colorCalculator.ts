@@ -5,7 +5,7 @@ export interface ColorCalculatorParams {
   selectedCategories: Record<AnnotationType, number | null>;
   hiddenCategoryIds: Record<AnnotationType, Set<number>>;
   coloringAnnotation: AnnotationType;
-  logpThreshold: number;
+  NumericThreshold: number;
   customColors: Record<AnnotationType, Record<number, string>>;
   categoryColors: Record<
     AnnotationType,
@@ -21,14 +21,14 @@ export const calculatePointColor = (
     selectedCategories,
     hiddenCategoryIds,
     coloringAnnotation,
-    logpThreshold,
+    NumericThreshold,
     customColors,
     categoryColors,
   }: {
     selectedCategories: Record<AnnotationType, number | null>;
     hiddenCategoryIds: Record<AnnotationType, Set<number>>;
     coloringAnnotation: AnnotationType;
-    logpThreshold: number;
+    NumericThreshold: number;
     customColors: Record<AnnotationType, Record<number, string>>;
     categoryColors: Record<
       AnnotationType,
@@ -86,21 +86,21 @@ export const calculatePointColor = (
     return [0, 0, 0, 0];
   }
 
-  // 3. use trait logp
-  if (extData?.logPs) {
-    const logp = extData.logPs[index];
-    if (logp < logpThreshold) {
+  // 3. numeric field coloring
+  if (extData.numeric) {
+    const { values, min, max } = extData.numeric;
+    const v = values[index];
+
+    if (v < NumericThreshold) {
       return [0, 0, 0, 5];
     }
-    if (extData.minLogP === null || extData.maxLogP === null) {
-      return [0, 0, 0, 255];
-    }
-    const t = (logp - extData.minLogP) / (extData.maxLogP - extData.minLogP);
+
+    const t = (v - min) / (max - min + 1e-6);
     return [
       Math.floor(255 * t),
       50,
       Math.floor(255 * (1 - t)),
-      Math.floor(150 * t),
+      Math.floor(180 * t),
     ];
   }
 

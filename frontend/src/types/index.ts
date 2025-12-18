@@ -42,12 +42,16 @@ export interface LoadedDataHeader {
   boundingBox: [[number, number, number], [number, number, number]];
   vertexCount: number;
 }
+export type NumericField = {
+  name: string; // e.g. "n_counts", "pct_mito"
+  values: Float32Array; // length = n_cells
+  min: number;
+  max: number;
+};
 
 export interface ExtData {
   originalColor: Uint8Array;
-  logPs: Float32Array | null;
-  minLogP: number | null;
-  maxLogP: number | null;
+  numeric: NumericField | null;
   annotations: Record<string, Uint8Array | Uint16Array | null>;
   POSITION: {
     value: Float64Array;
