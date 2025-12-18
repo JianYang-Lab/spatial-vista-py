@@ -1,10 +1,10 @@
 import { LASWorkerLoader } from "@loaders.gl/las";
-import type { AnnotationType } from "../config/annotations";
+// import type { AnnotationType } from "../config/annotations";
 
 export type LASMesh = (typeof LASWorkerLoader)["dataType"];
 export type RGBAColor = [number, number, number, number];
 export type LayoutMode = "3d" | "2d-treemap" | "2d-histogram";
-
+export type AnnotationType = string;
 // 基础颜色类型
 export type ColorRGB = [number, number, number];
 export type ColorRGBA = [number, number, number, number];
@@ -48,7 +48,7 @@ export interface ExtData {
   logPs: Float32Array | null;
   minLogP: number | null;
   maxLogP: number | null;
-  annotations: Record<string, Uint8Array | null>;
+  annotations: Record<string, Uint8Array | Uint16Array | null>;
   POSITION: {
     value: Float64Array;
   };

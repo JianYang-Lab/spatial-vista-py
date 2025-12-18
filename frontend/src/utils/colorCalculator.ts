@@ -1,7 +1,6 @@
-import { type AnnotationType, ANNOTATION_CONFIG } from "../config/annotations";
 import type { ExtData, RGBAColor } from "../types";
 import { hexToRgb } from "./helpers";
-
+type AnnotationType = string;
 export interface ColorCalculatorParams {
   selectedCategories: Record<AnnotationType, number | null>;
   hiddenCategoryIds: Record<AnnotationType, Set<number>>;
@@ -41,7 +40,7 @@ export const calculatePointColor = (
   let shouldShow = true;
 
   for (const annotationType in selectedCategories) {
-    if (!ANNOTATION_CONFIG.availableTypes.includes(annotationType)) continue;
+    // if (!ANNOTATION_CONFIG.availableTypes.includes(annotationType)) continue;
 
     const selectedCategory =
       selectedCategories[annotationType as AnnotationType];
@@ -108,13 +107,15 @@ export const calculatePointColor = (
   // 4. current annotation coloring
   else {
     const currentClassification = extData.annotations[coloringAnnotation];
+
+    // (A) 没有 annotation → 直接用 LAZ 原始颜色
     if (!currentClassification) {
       const i = index * 4;
       return [
         extData.originalColor[i],
         extData.originalColor[i + 1],
         extData.originalColor[i + 2],
-        extData.originalColor[i + 3],
+        extData.originalColor[i + 3] ?? 255,
       ];
     }
 
@@ -124,31 +125,31 @@ export const calculatePointColor = (
         ? Number(categoryId)
         : null;
 
-    // custom color
+    // (B) customColors 优先
     if (
       numericCategoryId !== null &&
-      customColors[coloringAnnotation] &&
-      customColors[coloringAnnotation][numericCategoryId]
+      customColors[coloringAnnotation]?.[numericCategoryId]
     ) {
-      const rgbColor = hexToRgb(
-        customColors[coloringAnnotation][numericCategoryId],
-      );
-      return [...rgbColor, 255];
-    } else if (
+      const rgb = hexToRgb(customColors[coloringAnnotation][numericCategoryId]);
+      return [...rgb, 255];
+    }
+
+    // (C) config/categoryColors
+    if (
       numericCategoryId !== null &&
-      categoryColors[coloringAnnotation][numericCategoryId]
+      categoryColors[coloringAnnotation]?.[numericCategoryId]
     ) {
       const color = categoryColors[coloringAnnotation][numericCategoryId];
       return [...color, 255];
-    } else if (coloringAnnotation === ANNOTATION_CONFIG.defaultType) {
-      const i = index * 4;
-      return [
-        extData.originalColor[i],
-        extData.originalColor[i + 1],
-        extData.originalColor[i + 2],
-        extData.originalColor[i + 3],
-      ];
     }
-    return [180, 180, 180, 255];
+
+    // (D) ⭐ 关键：默认 annotation → fallback 到 LAZ 原始 RGBA
+    const i = index * 4;
+    return [
+      extData.originalColor[i],
+      extData.originalColor[i + 1],
+      extData.originalColor[i + 2],
+      extData.originalColor[i + 3] ?? 255,
+    ];
   }
 };

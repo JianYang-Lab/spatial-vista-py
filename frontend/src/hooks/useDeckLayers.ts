@@ -48,7 +48,13 @@ export const useDeckLayers = ({
   return useMemo(() => {
     // Prefer using parsed loadedData over lazUrl so the layer uses the already-parsed object
     // once it becomes available (avoid re-parsing the blob URL).
-    const dataSource = loadedData || lazUrl;
+    if (!loadedData && !lazUrl) {
+      return [];
+    }
+
+    const dataSource = loadedData ?? lazUrl;
+    // console.log(lazUrl);
+    // console.log(typeof lazUrl);
     // Attach onDataLoad only when the dataSource is a URL/string and an onDataLoad handler exists.
     // If dataSource is the parsed object (`loadedData`), do NOT attach onDataLoad.
     const shouldUseOnDataLoad = typeof dataSource === "string" && !!onDataLoad;

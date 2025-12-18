@@ -13,13 +13,12 @@ import {
   EyeOffIcon,
   CircleCheckIcon,
 } from "lucide-react";
-import {
-  type AnnotationType,
-  ANNOTATION_CONFIG,
-} from "../../config/annotations";
+
+type AnnotationType = string;
 
 interface AnnotationPanelProps {
   // Data
+  annotationConfig: any | null;
   loadedAnnotations: Set<AnnotationType>;
   coloringAnnotation: AnnotationType;
   selectedCategories: Record<AnnotationType, number | null>;
@@ -45,6 +44,7 @@ interface AnnotationPanelProps {
 }
 
 export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
+  annotationConfig,
   loadedAnnotations,
   coloringAnnotation,
   selectedCategories,
@@ -106,73 +106,82 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
       {/* Annotation Types */}
       <div className="p-1 flex-1 flex flex-col">
         {/* Collapsible Annotation Categories */}
-        {Array.from(loadedAnnotations).map((type) => (
-          <Collapsible
-            key={type}
-            className="mb-1 border-b border-b-border"
-            disabled={!isLoaded}
-            defaultOpen={coloringAnnotation === type}
-          >
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-1 text-left">
-              <div className="flex items-center">
-                <span
-                  className={`text-sm ${
-                    coloringAnnotation === type
-                      ? "font-bold"
-                      : "text-muted-foreground font-medium"
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </span>
-              </div>
-              {/* Trash this anno */}
-              <div className="flex items-center space-x-1">
-                {type !== ANNOTATION_CONFIG.defaultType && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-6 w-6 p-0 hover:text-red-500"
-                    onClick={() => {
-                      onClearAnnotation(type);
-                      onSetAnnotationForColoring(ANNOTATION_CONFIG.defaultType);
-                    }}
-                    title={`Clear ${type} annotation`}
+        {Array.from(loadedAnnotations).map((type) => {
+          const items = annotationConfig?.AnnoMaps?.[type]?.Items ?? [];
+
+          return (
+            <Collapsible
+              key={type}
+              className="mb-1 border-b border-b-border"
+              disabled={!isLoaded}
+              defaultOpen={coloringAnnotation === type}
+            >
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-1 text-left">
+                <div className="flex items-center">
+                  <span
+                    className={`text-sm ${
+                      coloringAnnotation === type
+                        ? "font-bold"
+                        : "text-muted-foreground font-medium"
+                    }`}
                   >
-                    <Trash2Icon className="h-4 w-4" />
-                  </Button>
-                )}
-                {coloringAnnotation !== type && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-6 w-6 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSetAnnotationForColoring(type);
-                    }}
-                  >
-                    <PaintBucketIcon className="h-4 w-4" />
-                  </Button>
-                )}
-                <ChevronsDownIcon className="h-4 w-4" />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="p-0 border-t">
-              <CategoryList
-                type={type}
-                categories={ANNOTATION_CONFIG.annotationMaps[type]}
-                selectedCategory={selectedCategories[type]}
-                hiddenCategories={hiddenCategoryIds[type] || new Set()}
-                categoryColors={categoryColors[type]}
-                customColors={customColors[type]}
-                currentTrait={currentTrait}
-                coloringAnnotation={coloringAnnotation}
-                onCategorySelect={handleCategorySelect}
-                onCategoryToggle={handleCategoryToggle}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
+                    {type}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1">
+                  {annotationConfig &&
+                    type !== annotationConfig.DefaultAnnoType && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-6 w-6 p-0 hover:text-red-500"
+                        onClick={() => {
+                          onClearAnnotation(type);
+                          onSetAnnotationForColoring(
+                            annotationConfig.DefaultAnnoType,
+                          );
+                        }}
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                  {coloringAnnotation !== type && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetAnnotationForColoring(type);
+                      }}
+                    >
+                      <PaintBucketIcon className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  <ChevronsDownIcon className="h-4 w-4" />
+                </div>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="p-0 border-t">
+                <CategoryList
+                  type={type}
+                  categories={items}
+                  selectedCategory={selectedCategories[type]}
+                  hiddenCategories={hiddenCategoryIds[type] || new Set()}
+                  categoryColors={categoryColors[type] ?? {}}
+                  customColors={customColors[type] ?? {}}
+                  currentTrait={currentTrait}
+                  coloringAnnotation={coloringAnnotation}
+                  onCategorySelect={handleCategorySelect}
+                  onCategoryToggle={handleCategoryToggle}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </div>
     </div>
   );
@@ -181,7 +190,12 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
 // Category List sub-component
 interface CategoryListProps {
   type: AnnotationType;
-  categories: Record<number, string>;
+  // categories: Record<number, string>;
+  categories: Array<{
+    Name: string;
+    Code: number;
+    Color?: [number, number, number] | null;
+  }>;
   selectedCategory: number | null;
   hiddenCategories: Set<number>;
   categoryColors: Record<number, [number, number, number]>;
@@ -206,14 +220,15 @@ const CategoryList: React.FC<CategoryListProps> = ({
 }) => {
   return (
     <div className="space-y-1 overflow-y-auto">
-      {Object.entries(categories).map(([id, name]) => {
-        const categoryId = parseInt(id);
+      {categories.map((item) => {
+        const categoryId = item.Code;
+        const name = item.Name;
+
         const isHidden = hiddenCategories.has(categoryId);
         const isActive = selectedCategory === categoryId;
-        const withTrait = currentTrait !== null; // 当有trait数据时禁用
+        const withTrait = currentTrait !== null;
         const isColoringType = coloringAnnotation === type;
 
-        // if current anno type else gray
         const color = isColoringType
           ? customColors[categoryId] ||
             `rgb(${(categoryColors[categoryId] || [180, 180, 180]).join(", ")})`
@@ -221,7 +236,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
 
         return (
           <div
-            key={id}
+            key={categoryId}
             className={`flex items-center justify-between p-1.5 pb-3 rounded ${
               isActive ? "bg-primary/10 border-primary/30" : ""
             } ${withTrait ? "opacity-50" : "hover:bg-secondary"} ${
@@ -233,15 +248,12 @@ const CategoryList: React.FC<CategoryListProps> = ({
               onClick={() => onCategorySelect(type, categoryId)}
             >
               <button
-                className="w-4 h-4 rounded-sm flex items-center justify-center mr-1.5 flex-shrink-0"
+                className="w-4 h-4 rounded-sm flex items-center justify-center mr-1.5"
                 style={{ backgroundColor: color }}
                 onClick={(e) => {
-                  e.stopPropagation(); // prevent triggering parent onClick
+                  e.stopPropagation();
                   onCategoryToggle(type, categoryId);
                 }}
-                title={
-                  isHidden ? `Show ${name} (currently hidden)` : `Hide ${name}`
-                }
               >
                 {isHidden ? (
                   <EyeOffIcon className="h-2 w-2 text-white" />
@@ -249,6 +261,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
                   isActive && <CircleCheckIcon className="h-2 w-2 text-white" />
                 )}
               </button>
+
               <span
                 className={`text-xs ${
                   isActive ? "font-medium" : "text-muted-foreground"

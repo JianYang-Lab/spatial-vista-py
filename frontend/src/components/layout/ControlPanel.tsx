@@ -19,8 +19,7 @@ import {
   ChevronRightIcon,
   HelpCircleIcon,
 } from "lucide-react";
-import { AnnotationPieChart } from "../charts/AnnotationPieChart";
-import { LogpBarChart } from "../charts/LogpBarChart";
+
 import {
   type AnnotationType,
   ANNOTATION_CONFIG,
@@ -37,7 +36,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "../ui/hover-card";
-import RingLoader from "react-spinners/RingLoader";
 
 interface ControlPanelProps {
   // Camera controls
@@ -85,8 +83,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   pointOpacity,
   // logpThreshold,
   minMaxLogp,
-  pieChartProps,
-  logpBarChartProps,
   isLoaded,
   currentTrait,
   coloringAnnotation,
@@ -162,13 +158,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       />
 
       {/* Summary Plot */}
-      <SummaryChartsSection
+      {/*<SummaryChartsSection
         isLoaded={isLoaded}
         currentTrait={currentTrait}
         coloringAnnotation={coloringAnnotation}
         pieChartProps={pieChartProps}
         logpBarChartProps={logpBarChartProps}
-      />
+      />*/}
 
       {/* Informations */}
       <InformationSection
@@ -478,68 +474,6 @@ const PointControlsSection: React.FC<PointControlsSectionProps> = ({
       </div>
     </CardContent>
   </Card>
-);
-
-// Summary Charts Sub-component
-interface SummaryChartsSectionProps {
-  isLoaded: boolean;
-  currentTrait: string | null;
-  coloringAnnotation: AnnotationType;
-  pieChartProps: ChartProps;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logpBarChartProps: any;
-}
-
-const SummaryChartsSection: React.FC<SummaryChartsSectionProps> = ({
-  isLoaded,
-  currentTrait,
-  coloringAnnotation,
-  pieChartProps,
-  logpBarChartProps,
-}) => (
-  <>
-    {/* Summary Plot */}
-    <Card className="w-full p-2 rounded-md flex justify-center gap-0">
-      <CardHeader className="items-center pb-0 px-1">
-        <CardTitle>
-          {ANNOTATION_CONFIG.annotationMaps[coloringAnnotation]
-            ? `Category distribution for ${coloringAnnotation}`
-            : "Select an annotation type"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0 px-0">
-        {!isLoaded ? (
-          <div className="justify-center flex">
-            <RingLoader
-              color="#B967C7"
-              cssOverride={{}}
-              loading
-              size={100}
-              speedMultiplier={0.8}
-            />
-          </div>
-        ) : (
-          <AnnotationPieChart {...pieChartProps} />
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Summary Plot For logp */}
-    {isLoaded && currentTrait !== null && (
-      <Card className="w-full p-2 rounded-md flex justify-center gap-0">
-        <CardHeader className="items-center pb-0 px-1">
-          <CardTitle>
-            {ANNOTATION_CONFIG.annotationMaps[coloringAnnotation]
-              ? `Median logP of ${currentTrait} in ${coloringAnnotation}`
-              : "Select an annotation type"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 pb-0 px-0">
-          <LogpBarChart {...logpBarChartProps} />
-        </CardContent>
-      </Card>
-    )}
-  </>
 );
 
 // Help Button Sub-component

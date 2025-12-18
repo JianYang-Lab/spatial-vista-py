@@ -16,7 +16,6 @@ import { AnnotationPanel } from "../components/layout/AnnotationPanel";
 import { ControlPanel } from "../components/layout/ControlPanel";
 import { VisualizationArea } from "../components/layout/VisualizationArea";
 import { TraitSelectionDialog } from "../components/dialogs/TraitSelectionDialog";
-import { AnnotationSelectionDialog } from "../components/dialogs/AnnotationSelectionDialog";
 import { ColorPickerDialog } from "../components/dialogs/ColorPickerDialog";
 
 import { useWidgetModel } from "@/widget_context";
@@ -30,16 +29,50 @@ export default function Vis({
 }) {
   // Refs
   const glRef = useRef<WebGLRenderingContext | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setCategoryColorsRef = useRef<(colors: any) => void>(() => {});
 
   // UI States Hook
   const uiStates = useUIStates();
 
   // View States Hook
   const viewStates = useViewStates(); // Will be updated by data manager
+
   const model = useWidgetModel();
+  // laz URL State
   const [lazUrl, setLazUrl] = useState<string | null>(null);
+
+  // AnnotaionsConfig Hook
+  const [annotationConfig, setAnnotationConfig] = useState<any | null>(null);
+  const [annotationBins, setAnnotationBins] = useState<
+    Record<string, Uint8Array | Uint16Array>
+  >({});
+
+  useEffect(() => {
+    if (!model) return;
+
+    const config = model.get("annotation_config");
+    const bins = model.get("annotation_bins");
+
+    console.log("Exposed config", config);
+
+    if (!config || !bins) return;
+
+    const parsedBins: Record<string, Uint8Array | Uint16Array> = {};
+
+    for (const anno of config.AvailableAnnoTypes) {
+      const dv = bins[anno] as DataView;
+      if (!dv) continue;
+
+      // ⚠️ 假设 uint16；之后可从 config 里带 dtype
+      parsedBins[anno] = new Uint16Array(
+        dv.buffer,
+        dv.byteOffset,
+        dv.byteLength / 2,
+      );
+    }
+
+    setAnnotationConfig(config);
+    setAnnotationBins(parsedBins);
+  }, [model]);
 
   useEffect(() => {
     let currentUrl: string | null = null;
@@ -90,6 +123,7 @@ export default function Vis({
     }
     console.log("Vis debug - current loadedData exists:", !!loadedData);
   }, [lazUrl]);
+
   // Data Manager Hook
   const {
     isLoaded,
@@ -101,35 +135,24 @@ export default function Vis({
     loadAnnotation,
     loadTrait,
     clearAnnotation,
-    setLoadedData,
   } = useDataManager({
     onLoad,
-    setCategoryColors: (colors) => setCategoryColorsRef.current(colors),
     updateViewState: viewStates.updateViewState,
     setInitialCamera: viewStates.setInitialCamera,
     setActiveZoom: viewStates.setActiveZoom,
+    annotationConfig,
+    annotationBins,
   });
   useEffect(() => {
     viewStates.setIsLoaded?.(isLoaded);
   }, [isLoaded, viewStates]);
 
-  useEffect(() => {
-    if (lazUrl) {
-      console.log(
-        "Vis: lazUrl changed — clearing loadedData so DeckGL will reload from URL",
-        lazUrl,
-      );
-      setLoadedData(null);
-    }
-  }, [lazUrl, setLoadedData]);
-
   // Annotation States Hook
-  const annotationStates = useAnnotationStates(loadedData!, currentTrait);
-
-  // update setCategoryColorsRef when annotationStates.setCategoryColors changes
-  useEffect(() => {
-    setCategoryColorsRef.current = annotationStates.setCategoryColors;
-  }, [annotationStates.setCategoryColors]);
+  const annotationStates = useAnnotationStates(
+    loadedData!,
+    currentTrait,
+    annotationConfig,
+  );
 
   // Section States Hook
   const sectionStates = useSectionStates(
@@ -275,7 +298,7 @@ export default function Vis({
         selectedCategories={annotationStates.selectedCategories}
         showPointCloud={uiStates.showPointCloud}
         onTraitOpen={() => uiStates.setTraitOpen(true)}
-        onAnnotationOpen={() => uiStates.setAnnotationOpen(true)}
+        // onAnnotationOpen={() => uiStates.setAnnotationOpen(true)}
         onToggleView={toggleDeckGLDisplay}
         onCapture={captureCurrentImage}
       />
@@ -284,6 +307,7 @@ export default function Vis({
         {/* Annotation Panel */}
         <div className="hidden md:w-[10%] p-2 overflow-y-auto h-full md:flex flex-col md:min-w-[120px]">
           <AnnotationPanel
+            annotationConfig={annotationConfig}
             loadedAnnotations={loadedAnnotations}
             coloringAnnotation={annotationStates.coloringAnnotation}
             selectedCategories={annotationStates.selectedCategories}
@@ -304,31 +328,33 @@ export default function Vis({
 
         {/* Visualization Area */}
         <div className="flex-1 min-w-0 h-90% relative lg:w-[70%]">
-          <VisualizationArea
-            isLoaded={isLoaded}
-            showPointCloud={uiStates.showPointCloud}
-            showScatterplot={uiStates.showScatterplot}
-            layoutMode={viewStates.layoutMode}
-            viewState={viewStates.viewState}
-            stviewState={viewStates.stviewState}
-            initialCamera={viewStates.initialCamera}
-            layers={layers}
-            loadedData={loadedData}
-            loadedAnnotations={loadedAnnotations}
-            currentTrait={currentTrait}
-            availableSectionIDs={sectionStates.availableSectionIDs}
-            currentSectionID={sectionStates.currentSectionID}
-            sectionPreviews={sectionStates.sectionPreviews}
-            logpThreshold={uiStates.logpThreshold}
-            minMaxLogp={minMaxLogp}
-            device={device}
-            onViewStateUpdate={viewStates.updateViewState}
-            onStViewStateUpdate={viewStates.updateStviewState}
-            onActiveZoomChange={viewStates.setActiveZoom}
-            onSectionClick={sectionStates.handleSectionClick}
-            onLogpThresholdChange={uiStates.setLogpThreshold}
-            onAfterRender={handleAfterRender}
-          />
+          {
+            <VisualizationArea
+              isLoaded={isLoaded}
+              showPointCloud={uiStates.showPointCloud}
+              showScatterplot={uiStates.showScatterplot}
+              layoutMode={viewStates.layoutMode}
+              viewState={viewStates.viewState}
+              stviewState={viewStates.stviewState}
+              initialCamera={viewStates.initialCamera}
+              layers={layers}
+              loadedData={loadedData}
+              loadedAnnotations={loadedAnnotations}
+              currentTrait={currentTrait}
+              availableSectionIDs={sectionStates.availableSectionIDs}
+              currentSectionID={sectionStates.currentSectionID}
+              sectionPreviews={sectionStates.sectionPreviews}
+              logpThreshold={uiStates.logpThreshold}
+              minMaxLogp={minMaxLogp}
+              device={device}
+              onViewStateUpdate={viewStates.updateViewState}
+              onStViewStateUpdate={viewStates.updateStviewState}
+              onActiveZoomChange={viewStates.setActiveZoom}
+              onSectionClick={sectionStates.handleSectionClick}
+              onLogpThresholdChange={uiStates.setLogpThreshold}
+              onAfterRender={handleAfterRender}
+            />
+          }
         </div>
 
         {/* Control Panel */}
@@ -343,8 +369,6 @@ export default function Vis({
             pointOpacity={uiStates.pointOpacity}
             logpThreshold={uiStates.logpThreshold}
             minMaxLogp={minMaxLogp}
-            pieChartProps={annotationStates.pieChartProps}
-            logpBarChartProps={annotationStates.logpBarChartProps}
             isLoaded={isLoaded}
             currentTrait={currentTrait}
             coloringAnnotation={annotationStates.coloringAnnotation}
@@ -380,18 +404,10 @@ export default function Vis({
         onLoadTrait={loadTrait}
       />
 
-      <AnnotationSelectionDialog
-        open={uiStates.annotationOpen}
-        loadedAnnotations={loadedAnnotations}
-        coloringAnnotation={annotationStates.coloringAnnotation}
-        onOpenChange={uiStates.setAnnotationOpen}
-        onLoadAnnotation={loadAnnotation}
-        onSetAnnotationForColoring={annotationStates.setAnnotationForColoring}
-      />
-
       <ColorPickerDialog
         open={uiStates.colorPickerOpen}
         coloringAnnotation={annotationStates.coloringAnnotation}
+        annotationConfig={annotationConfig}
         categoryColors={annotationStates.categoryColors}
         customColors={annotationStates.customColors}
         onOpenChange={uiStates.setColorPickerOpen}

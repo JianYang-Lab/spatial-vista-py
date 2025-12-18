@@ -1,6 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
-import type { AnnotationType } from "../config/annotations";
-import { ANNOTATION_CONFIG } from "../config/annotations";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { hexToRgb } from "../utils/helpers";
 import type {
   CategoryColors,
@@ -13,15 +11,15 @@ import type {
   SelectedCategories,
 } from "../types";
 
+type AnnotationType = string;
+
 export interface UseAnnotationStatesReturn {
-  // States
-  coloringAnnotation: AnnotationType;
+  coloringAnnotation: AnnotationType | null;
   selectedCategories: SelectedCategories;
   hiddenCategoryIds: HiddenCategoryIds;
   categoryColors: CategoryColors;
   customColors: CustomColors;
 
-  // Actions
   setColoringAnnotation: (type: AnnotationType) => void;
   setSelectedCategories: (categories: SelectedCategories) => void;
   setHiddenCategoryIds: (hiddenIds: HiddenCategoryIds) => void;
@@ -29,67 +27,150 @@ export interface UseAnnotationStatesReturn {
   setCustomColors: (colors: CustomColors) => void;
   setAnnotationForColoring: (type: AnnotationType) => void;
 
-  // Computed values for charts
-  pieChartProps: ChartProps;
-  logpBarChartProps: LogpBarChartProps;
+  pieChartProps: ChartProps | null;
+  logpBarChartProps: LogpBarChartProps | null;
   colorParams: ColorParams;
 }
 
 export const useAnnotationStates = (
   loadedData: LoadedData,
   currentTrait: string | null,
+  annotationConfig: any | null,
 ): UseAnnotationStatesReturn => {
-  // Currently used annotation type for coloring
-  const [coloringAnnotation, setColoringAnnotation] = useState<AnnotationType>(
-    ANNOTATION_CONFIG.defaultType,
+  /* ----------------------------
+   * 1. 当前着色 annotation
+   * ---------------------------- */
+  const [coloringAnnotation, setColoringAnnotation] =
+    useState<AnnotationType | null>(null);
+
+  useEffect(() => {
+    if (!annotationConfig) return;
+
+    const { DefaultAnnoType, AvailableAnnoTypes } = annotationConfig;
+    setColoringAnnotation(DefaultAnnoType);
+    // if (AvailableAnnoTypes.includes(DefaultAnnoType)) {
+    //   setColoringAnnotation(DefaultAnnoType);
+    // } else {
+    //   console.warn(
+    //     "[SpatialVista] DefaultAnnoType not in AvailableAnnoTypes, fallback:",
+    //     DefaultAnnoType,
+    //     "→",
+    //     AvailableAnnoTypes[0],
+    //   );
+    //   setColoringAnnotation(AvailableAnnoTypes[0] ?? null);
+    // }
+  }, [annotationConfig]);
+
+  /* ----------------------------
+   * 2. selectedCategories
+   * ---------------------------- */
+  const [selectedCategories, setSelectedCategories] =
+    useState<SelectedCategories>({});
+
+  useEffect(() => {
+    if (!annotationConfig) return;
+    const initial: SelectedCategories = {};
+    annotationConfig.AvailableAnnoTypes.forEach((t: string) => {
+      initial[t] = null;
+    });
+    setSelectedCategories(initial);
+  }, [annotationConfig]);
+
+  /* ----------------------------
+   * 3. hiddenCategoryIds
+   * ---------------------------- */
+  const [hiddenCategoryIds, setHiddenCategoryIds] = useState<HiddenCategoryIds>(
+    {},
   );
 
-  const [selectedCategories, setSelectedCategories] = useState<
-    Record<AnnotationType, number | null>
-  >(() => {
-    const initial: Record<string, number | null> = {};
-    ANNOTATION_CONFIG.availableTypes.forEach((type) => {
-      initial[type] = null;
+  useEffect(() => {
+    if (!annotationConfig) return;
+    const initial: HiddenCategoryIds = {};
+    annotationConfig.AvailableAnnoTypes.forEach((t: string) => {
+      initial[t] = new Set();
     });
-    return initial;
-  });
+    setHiddenCategoryIds(initial);
+  }, [annotationConfig]);
 
-  // Hidden category ids for each annotation type
-  const [hiddenCategoryIds, setHiddenCategoryIds] = useState<
-    Record<AnnotationType, Set<number>>
-  >(() => {
-    const initial: Record<string, Set<number>> = {};
-    ANNOTATION_CONFIG.availableTypes.forEach((type) => {
-      initial[type] = new Set();
-    });
-    return initial;
-  });
+  /* ----------------------------
+   * 4. categoryColors（来自 config）
+   * ---------------------------- */
+  const [categoryColors, setCategoryColors] = useState<CategoryColors>({});
 
-  // Color map for each annotation type
-  const [categoryColors, setCategoryColors] = useState<
-    Record<AnnotationType, Record<number, [number, number, number]>>
-  >(ANNOTATION_CONFIG.defaultColormap);
+  useEffect(() => {
+    if (!annotationConfig) return;
 
-  // User custom colors for categories
-  const [customColors, setCustomColors] = useState<
-    Record<AnnotationType, Record<number, string>>
-  >(() => {
-    const initial: Record<string, Record<number, string>> = {};
-    ANNOTATION_CONFIG.availableTypes.forEach((type) => {
-      initial[type] = {};
-    });
-    return initial;
-  });
+    const colors: CategoryColors = {};
+    for (const anno of annotationConfig.AvailableAnnoTypes) {
+      const items = annotationConfig.AnnoMaps[anno]?.Items ?? [];
+      const cmap: Record<number, [number, number, number]> = {};
+      for (const item of items) {
+        if (item.Color) {
+          cmap[item.Code] = item.Color;
+        }
+      }
+      colors[anno] = cmap;
+    }
+    setCategoryColors(colors);
+  }, [annotationConfig]);
 
-  // Coloring by selected annotation type
-  const setAnnotationForColoring = useCallback(
-    (type: AnnotationType) => {
-      // Ensure data loaded
-      if (!loadedData.extData.annotations[type]) {
-        return;
+  useEffect(() => {
+    if (!annotationConfig) return;
+    if (!loadedData?.extData?.annotations) return;
+
+    const ext = loadedData.extData;
+    const anns = ext.annotations;
+    const colors: CategoryColors = {};
+
+    for (const anno of annotationConfig.AvailableAnnoTypes) {
+      const items = annotationConfig.AnnoMaps?.[anno]?.Items ?? [];
+      const cmap: Record<number, [number, number, number]> = {};
+
+      const hasExplicitColor = items.some((it: any) => it.Color != null);
+
+      if (hasExplicitColor) {
+        for (const it of items) {
+          if (it.Color) cmap[it.Code] = it.Color;
+        }
+      } else if (anns[anno] && ext.originalColor) {
+        const ids = anns[anno] as Uint8Array | Uint16Array;
+        const oc = ext.originalColor;
+
+        for (let i = 0; i < ids.length; i++) {
+          const code = ids[i];
+          if (cmap[code]) continue;
+          const j = i * 4;
+          cmap[code] = [oc[j], oc[j + 1], oc[j + 2]];
+          if (Object.keys(cmap).length >= items.length) break;
+        }
       }
 
-      // Set
+      colors[anno] = cmap;
+    }
+
+    setCategoryColors(colors);
+  }, [annotationConfig, loadedData]);
+
+  /* ----------------------------
+   * 5. customColors（用户覆盖）
+   * ---------------------------- */
+  const [customColors, setCustomColors] = useState<CustomColors>({});
+
+  useEffect(() => {
+    if (!annotationConfig) return;
+    const initial: CustomColors = {};
+    annotationConfig.AvailableAnnoTypes.forEach((t: string) => {
+      initial[t] = {};
+    });
+    setCustomColors(initial);
+  }, [annotationConfig]);
+
+  /* ----------------------------
+   * 6. 切换 annotation
+   * ---------------------------- */
+  const setAnnotationForColoring = useCallback(
+    (type: AnnotationType) => {
+      if (!loadedData?.extData?.annotations?.[type]) return;
       setColoringAnnotation(type);
       setSelectedCategories((prev) => ({
         ...prev,
@@ -99,7 +180,9 @@ export const useAnnotationStates = (
     [loadedData],
   );
 
-  // Color params for deck layers
+  /* ----------------------------
+   * 7. colorParams（deck.gl）
+   * ---------------------------- */
   const colorParams = useMemo(
     () => ({
       selectedCategories,
@@ -117,27 +200,31 @@ export const useAnnotationStates = (
     ],
   );
 
-  // Pie chart props
-  const pieChartProps = useMemo(() => {
+  /* ----------------------------
+   * 8. Pie chart
+   * ---------------------------- */
+  const pieChartProps = useMemo<ChartProps | null>(() => {
+    if (!coloringAnnotation || !annotationConfig) return null;
+
+    const baseColors = categoryColors[coloringAnnotation] ?? {};
+    const overrides = Object.fromEntries(
+      Object.entries(customColors[coloringAnnotation] ?? {}).map(([k, v]) => [
+        Number(k),
+        hexToRgb(v),
+      ]),
+    );
+
     return {
       annotationType: coloringAnnotation,
-      annotationMap: ANNOTATION_CONFIG.annotationMaps[coloringAnnotation] || {},
-      // If customColors exist, use it to override categoryColors
-      colormap: {
-        ...categoryColors[coloringAnnotation],
-        ...Object.fromEntries(
-          Object.entries(customColors[coloringAnnotation]).map(([k, v]) => [
-            Number(k),
-            hexToRgb(v),
-          ]),
-        ),
-      },
-      hiddenCategoryIds: hiddenCategoryIds,
+      annotationMap: annotationConfig.AnnoMaps[coloringAnnotation]?.Items ?? [],
+      colormap: { ...baseColors, ...overrides },
+      hiddenCategoryIds,
       selectedCategory: selectedCategories[coloringAnnotation],
       data: loadedData,
     };
   }, [
     coloringAnnotation,
+    annotationConfig,
     hiddenCategoryIds,
     selectedCategories,
     loadedData,
@@ -145,27 +232,32 @@ export const useAnnotationStates = (
     customColors,
   ]);
 
-  // LogP bar chart props
-  const logpBarChartProps = useMemo(() => {
+  /* ----------------------------
+   * 9. LogP bar chart
+   * ---------------------------- */
+  const logpBarChartProps = useMemo<LogpBarChartProps | null>(() => {
+    if (!coloringAnnotation || !annotationConfig) return null;
+
+    const baseColors = categoryColors[coloringAnnotation] ?? {};
+    const overrides = Object.fromEntries(
+      Object.entries(customColors[coloringAnnotation] ?? {}).map(([k, v]) => [
+        Number(k),
+        hexToRgb(v),
+      ]),
+    );
+
     return {
       annotationType: coloringAnnotation,
-      annotationMap: ANNOTATION_CONFIG.annotationMaps[coloringAnnotation] || {},
-      colormap: {
-        ...categoryColors[coloringAnnotation],
-        ...Object.fromEntries(
-          Object.entries(customColors[coloringAnnotation]).map(([k, v]) => [
-            Number(k),
-            hexToRgb(v),
-          ]),
-        ),
-      },
-      hiddenCategoryIds: hiddenCategoryIds,
+      annotationMap: annotationConfig.AnnoMaps[coloringAnnotation]?.Items ?? [],
+      colormap: { ...baseColors, ...overrides },
+      hiddenCategoryIds,
       selectedCategory: selectedCategories[coloringAnnotation],
-      currentTrait: currentTrait,
+      currentTrait,
       data: loadedData,
     };
   }, [
     coloringAnnotation,
+    annotationConfig,
     hiddenCategoryIds,
     selectedCategories,
     currentTrait,

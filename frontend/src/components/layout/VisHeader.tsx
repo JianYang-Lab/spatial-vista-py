@@ -8,14 +8,14 @@ import {
   Layers3Icon,
   Move3dIcon,
 } from "lucide-react";
-import { type AnnotationType } from "../../config/annotations";
+// import { type AnnotationType } from "../../config/annotations";
 
 interface AppHeaderProps {
   // States
   isLoaded: boolean;
   currentTrait: string | null;
-  coloringAnnotation: AnnotationType;
-  selectedCategories: Record<AnnotationType, number | null>;
+  // coloringAnnotation: AnnotationType;
+  // selectedCategories: Record<AnnotationType, number | null>;
   showPointCloud: boolean;
 
   // Handlers
@@ -29,7 +29,7 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
   isLoaded,
   showPointCloud,
   onTraitOpen,
-  onAnnotationOpen,
+  // onAnnotationOpen,
   onToggleView,
   onCapture,
 }) => {
@@ -48,7 +48,7 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
             <span className="hidden sm:inline ml-1">Query Trait</span>
           </Button>
 
-          <Button
+          {/*<Button
             variant="outline"
             size="sm"
             onClick={onAnnotationOpen}
@@ -56,7 +56,7 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
           >
             <LoaderPinwheelIcon className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">Annotations</span>
-          </Button>
+          </Button>*/}
         </div>
 
         {/* right button group */}
