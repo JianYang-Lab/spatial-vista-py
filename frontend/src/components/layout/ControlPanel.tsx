@@ -20,8 +20,7 @@ import {
   HelpCircleIcon,
 } from "lucide-react";
 
-import { type AnnotationType } from "../../config/annotations";
-import type { ChartProps } from "../../types";
+import { type AnnotationType } from "@/types";
 import { Switch } from "../ui/switch";
 import {
   Collapsible,
@@ -48,14 +47,10 @@ interface ControlPanelProps {
   NumericThreshold: number;
   minMaxLogp: [number, number] | null;
 
-  // Chart data
-  pieChartProps: ChartProps;
-  logpBarChartProps: ChartProps;
-
   // States
   isLoaded: boolean;
   currentTrait: string | null;
-  coloringAnnotation: AnnotationType;
+  coloringAnnotation: AnnotationType | null;
   selectedCategories: Record<AnnotationType, number | null>;
 
   // Handlers
@@ -157,15 +152,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         onResetPointControls={onResetPointControls}
       />
 
-      {/* Summary Plot */}
-      {/*<SummaryChartsSection
-        isLoaded={isLoaded}
-        currentTrait={currentTrait}
-        coloringAnnotation={coloringAnnotation}
-        pieChartProps={pieChartProps}
-        logpBarChartProps={logpBarChartProps}
-      />*/}
-
       {/* Informations */}
       <InformationSection
         currentTrait={currentTrait}
@@ -181,7 +167,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 // Informations Sub-component
 interface InformationSectionProps {
   currentTrait: string | null;
-  coloringAnnotation: AnnotationType;
+  coloringAnnotation: AnnotationType | null;
   selectedCategories: Record<AnnotationType, number | null>;
   // showPointCloud: boolean;
   viewState: OrbitViewState;

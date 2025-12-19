@@ -1,15 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
-import type { CategoryColors, LASMesh, LoadedData } from "../types";
+import type {
+  CategoryColors,
+  ContinuousField,
+  LASMesh,
+  LoadedData,
+} from "../types";
 import { INITIAL_VIEW_STATE } from "../config/constants";
 
 type AnnotationType = string;
-
-type NumericField = {
-  name: string;
-  values: Float32Array;
-  min: number;
-  max: number;
-};
 
 interface UseDataManagerProps {
   onLoad?: (data: { count: number; progress: number }) => void;
@@ -38,12 +36,9 @@ export const useDataManager = ({
   const [loadedData, setLoadedData] = useState<LoadedData | null>(null);
   // const [currentTrait, setCurrentTrait] = useState<string | null>(null);
   // const [minMaxLogp, setMinMaxLogp] = useState<[number, number] | null>(null);
-  const [numericField, setNumericField] = useState<{
-    name: string;
-    values: Float32Array;
-    min: number;
-    max: number;
-  } | null>(null);
+  const [numericField, setNumericField] = useState<ContinuousField | null>(
+    null,
+  );
 
   const [loadedAnnotations, setLoadedAnnotations] = useState<
     Set<AnnotationType>
@@ -71,12 +66,7 @@ export const useDataManager = ({
       // logP/other annos will be loaded dynamically later
       (data as LoadedData).extData = {
         originalColor,
-        numeric: null as null | {
-          name: string;
-          values: Float32Array;
-          min: number;
-          max: number;
-        },
+        numeric: null as null | ContinuousField,
         annotations: defaultAnnIds ? { [defaultAnnoType]: defaultAnnIds } : {},
         POSITION: data.attributes.POSITION,
       };
@@ -191,36 +181,8 @@ export const useDataManager = ({
     // annotations are preloaded via widget
   }, []);
 
-  const clearAnnotation = useCallback(
-    (type: AnnotationType) => {
-      // NOT clear default annotation
-      if (type === annotationConfig.DefaultAnnoType) {
-        return;
-      }
-
-      // remove from extData
-      if (loadedData?.extData?.annotations[type]) {
-        loadedData.extData.annotations[type] = null;
-      }
-
-      // update loadedAnnotations
-      const newLoadedAnnotations = new Set(loadedAnnotations);
-      newLoadedAnnotations.delete(type);
-      setLoadedAnnotations(newLoadedAnnotations);
-    },
-    [loadedData, loadedAnnotations],
-  );
-
   const loadNumericField = useCallback(
-    (
-      field: {
-        name: string;
-        values: Float32Array;
-        min: number;
-        max: number;
-      } | null,
-      dataObj?: LoadedData,
-    ) => {
+    (field: ContinuousField | null, dataObj?: LoadedData) => {
       const targetData = dataObj || loadedData;
       if (!targetData) return;
 
@@ -246,7 +208,6 @@ export const useDataManager = ({
     onDataLoad,
     numericField,
     loadAnnotation,
-    clearAnnotation,
     setLoadedData,
   };
 };

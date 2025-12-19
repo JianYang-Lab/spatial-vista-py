@@ -18,7 +18,7 @@ export const useLayoutMode = (
   layoutMode: "3d" | "2d-treemap" | "2d-histogram",
   setLayoutMode: (mode: "3d" | "2d-treemap" | "2d-histogram") => void,
   currentTrait: string | null,
-  coloringAnnotation: string,
+  coloringAnnotation: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   loadedData: any,
   initialCamera: OrbitViewState,
@@ -31,7 +31,7 @@ export const useLayoutMode = (
 
   // Toggle layout mode between 3D and 2D treemap
   const toggleLayoutMode = useCallback(() => {
-    if (layoutMode === "3d") {
+    if (layoutMode === "3d" && coloringAnnotation) {
       if (currentTrait) {
         const histogramPos = generateHistogramPositions(
           loadedData,

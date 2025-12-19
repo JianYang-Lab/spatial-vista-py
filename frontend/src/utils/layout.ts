@@ -146,7 +146,7 @@ export const generateHistogramPositions = (
   const histogramPos = new Float32Array(pointCount * 3);
 
   const extData = loadedData.extData;
-  const logPs = extData?.logPs;
+  const logPs = extData?.numeric?.values;
   const annotationData = extData?.annotations?.[coloringAnnotation];
 
   if (!logPs || !annotationData) return null;
@@ -161,8 +161,12 @@ export const generateHistogramPositions = (
     categoryLogPs.get(category)!.push(logP);
   }
 
-  const minLogP = extData.minLogP ? extData.minLogP : 0;
-  const maxLogP = extData.maxLogP ? extData.maxLogP : 100;
+  const minLogP = extData.numeric?.ContinuousConfig.Max
+    ? extData.numeric.ContinuousConfig.Min
+    : 0;
+  const maxLogP = extData.numeric?.ContinuousConfig.Max
+    ? extData.numeric.ContinuousConfig.Max
+    : 1;
   const logPRange = maxLogP - minLogP;
 
   const numBins = 30;

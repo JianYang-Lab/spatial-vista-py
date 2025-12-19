@@ -1,26 +1,15 @@
 import React from "react";
 import { Button } from "../ui/button";
-import {
-  FolderOpenDotIcon,
-  SearchIcon,
-  LoaderPinwheelIcon,
-  CameraIcon,
-  Layers3Icon,
-  Move3dIcon,
-} from "lucide-react";
+import { SearchIcon, CameraIcon, Layers3Icon, Move3dIcon } from "lucide-react";
 // import { type AnnotationType } from "../../config/annotations";
 
 interface AppHeaderProps {
   // States
   isLoaded: boolean;
-  // currentNumericName: string | null;
-  // coloringAnnotation: AnnotationType;
-  // selectedCategories: Record<AnnotationType, number | null>;
   showPointCloud: boolean;
 
   // Handlers
   onContinuousOpen: () => void;
-  onAnnotationOpen: () => void;
   onToggleView: () => void;
   onCapture: () => void;
 }
@@ -29,7 +18,6 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
   isLoaded,
   showPointCloud,
   onContinuousOpen,
-  // onAnnotationOpen,
   onToggleView,
   onCapture,
 }) => {

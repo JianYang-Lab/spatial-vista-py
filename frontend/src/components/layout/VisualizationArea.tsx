@@ -12,10 +12,7 @@ import type {
   OrthographicViewState,
 } from "@deck.gl/core";
 import type { Device } from "@luma.gl/core";
-import {
-  type AnnotationType,
-  ANNOTATION_CONFIG,
-} from "../../config/annotations";
+import { type AnnotationType, type ContinuousField } from "@/types";
 
 interface VisualizationAreaProps {
   // Basic states
@@ -33,13 +30,6 @@ interface VisualizationAreaProps {
   layers: LayersList;
   loadedData: any;
   loadedAnnotations: Set<AnnotationType>;
-  // currentTrait: string | null;
-  activeContinuous: string | null;
-  numericField: {
-    name: string;
-    min: number;
-    max: number;
-  } | null;
   // Section carousel props
   availableSectionIDs: number[];
   currentSectionID: number;
@@ -74,13 +64,11 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   layers,
   loadedData,
   loadedAnnotations,
-  activeContinuous,
-  numericField,
   availableSectionIDs,
   currentSectionID,
   sectionPreviews,
   NumericThreshold,
-  minMaxValue: minMaxValue,
+  minMaxValue,
   device,
   onViewStateUpdate,
   onStViewStateUpdate,
@@ -249,8 +237,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
       )}
 
       {/* LogP Controls */}
-      {numericField &&
-        minMaxValue &&
+      {minMaxValue &&
         Number.isFinite(minMaxValue[0]) &&
         Number.isFinite(minMaxValue[1]) && (
           <div

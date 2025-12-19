@@ -1,6 +1,5 @@
 import { LASWorkerLoader } from "@loaders.gl/las";
 // import type { AnnotationType } from "../config/annotations";
-
 export type LASMesh = (typeof LASWorkerLoader)["dataType"];
 export type RGBAColor = [number, number, number, number];
 export type LayoutMode = "3d" | "2d-treemap" | "2d-histogram";
@@ -42,16 +41,23 @@ export interface LoadedDataHeader {
   boundingBox: [[number, number, number], [number, number, number]];
   vertexCount: number;
 }
-export type NumericField = {
+
+export type ContinuousConfig = {
+  DType: string;
+  Source: string;
+  Min: number;
+  Max: number;
+};
+
+export type ContinuousField = {
   name: string; // e.g. "n_counts", "pct_mito"
-  values: Float32Array; // length = n_cells
-  min: number;
-  max: number;
+  values: Float32Array | Uint16Array; // length = n_cells
+  ContinuousConfig: ContinuousConfig;
 };
 
 export interface ExtData {
   originalColor: Uint8Array;
-  numeric: NumericField | null;
+  numeric: ContinuousField | null;
   annotations: Record<string, Uint8Array | Uint16Array | Uint32Array | null>;
   POSITION: {
     value: Float64Array;
@@ -64,17 +70,4 @@ export interface LoadedData {
   attributes?: {
     [key: string]: unknown; // deck.gl attributes
   };
-}
-
-export interface ChartProps {
-  annotationType: AnnotationType;
-  annotationMap: Record<number, string>;
-  colormap: Record<number, [number, number, number]>;
-  hiddenCategoryIds: HiddenCategoryIds;
-  selectedCategory: number | null;
-  data: LoadedData | null;
-}
-
-export interface LogpBarChartProps extends ChartProps {
-  currentTrait: string | null;
 }

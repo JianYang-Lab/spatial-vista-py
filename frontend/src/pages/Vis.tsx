@@ -2,25 +2,26 @@ import { useRef, useCallback, useEffect, useState } from "react";
 import { Device } from "@luma.gl/core";
 
 // Hooks
-import { useDataManager } from "../hooks/useDataManager";
-import { useDeckLayers } from "../hooks/useDeckLayers";
-import { useViewStates } from "../hooks/useViewStates";
-import { useAnnotationStates } from "../hooks/useAnnotationStates";
-import { useUIStates } from "../hooks/useUIStates";
-import { useSectionStates } from "../hooks/useSectionStates";
-import { useLayoutMode } from "../hooks/useLayoutMode";
+import { useDataManager } from "@/hooks/useDataManager";
+import { useDeckLayers } from "@/hooks/useDeckLayers";
+import { useViewStates } from "@/hooks/useViewStates";
+import { useAnnotationStates } from "@/hooks/useAnnotationStates";
+import { useUIStates } from "@/hooks/useUIStates";
+import { useSectionStates } from "@/hooks/useSectionStates";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 
 // Components
-import { VisHeader } from "../components/layout/VisHeader";
-import { AnnotationPanel } from "../components/layout/AnnotationPanel";
-import { ControlPanel } from "../components/layout/ControlPanel";
-import { VisualizationArea } from "../components/layout/VisualizationArea";
-import { ContinuousSelectionDialog } from "../components/dialogs/ContinuousSelectionDialog";
-import { ColorPickerDialog } from "../components/dialogs/ColorPickerDialog";
+import { VisHeader } from "@/components/layout/VisHeader";
+import { AnnotationPanel } from "@/components/layout/AnnotationPanel";
+import { ControlPanel } from "@/components/layout/ControlPanel";
+import { VisualizationArea } from "@/components/layout/VisualizationArea";
+import { ContinuousSelectionDialog } from "@/components/dialogs/ContinuousSelectionDialog";
+import { ColorPickerDialog } from "@/components/dialogs/ColorPickerDialog";
 
 import { useWidgetModel } from "@/widget_context";
 import { parseContinuousArray } from "@/utils/helpers";
 import { decodeFloat16 } from "@/utils/helpers";
+import type { ContinuousConfig, ContinuousField } from "@/types";
 
 export default function Vis({
   onLoad,
@@ -48,15 +49,7 @@ export default function Vis({
     Record<string, Uint8Array | Uint16Array | Uint32Array>
   >({});
 
-  // NumericFiled Hook
-  type ContinuousField = {
-    name: string;
-    values: Float32Array;
-    min: number;
-    max: number;
-    source: string;
-  };
-
+  // Continuous Fields State
   const [continuousFields, setContinuousFields] = useState<
     Record<string, ContinuousField>
   >({});
@@ -65,28 +58,30 @@ export default function Vis({
   useEffect(() => {
     if (!model) return;
 
-    const traits = model.get("continuous_traits");
+    const configMap: Record<string, ContinuousConfig> =
+      model.get("continuous_config");
     const bins = model.get("continuous_bins");
 
-    if (!traits || !bins) return;
+    if (!configMap || !bins) return;
 
     const parsed: Record<string, ContinuousField> = {};
 
-    for (const [name, meta] of Object.entries(traits)) {
+    for (const [name, config] of Object.entries(configMap) as [
+      string,
+      ContinuousConfig,
+    ][]) {
       const dv = bins[name] as DataView | undefined;
       if (!dv) continue;
 
-      const raw = parseContinuousArray(dv, meta.DType);
+      const raw = parseContinuousArray(dv, config.DType);
 
       const values =
-        meta.DType === "float16" ? decodeFloat16(raw as Uint16Array) : raw;
+        config.DType === "float16" ? decodeFloat16(raw as Uint16Array) : raw;
 
       parsed[name] = {
         name,
         values,
-        min: meta.Min,
-        max: meta.Max,
-        source: meta.Source, // "obs" | "gene"
+        ContinuousConfig: config,
       };
     }
 
@@ -198,7 +193,6 @@ export default function Vis({
     loadNumericField,
     onDataLoad,
     loadAnnotation,
-    clearAnnotation,
   } = useDataManager({
     onLoad,
     updateViewState: viewStates.updateViewState,
@@ -225,18 +219,10 @@ export default function Vis({
         return;
       }
 
-      loadNumericField(
-        {
-          name: field.name,
-          values: field.values,
-          min: field.min,
-          max: field.max,
-        },
-        loadedData,
-      );
+      loadNumericField(field, loadedData);
 
       // 可选：切换字段时重置阈值
-      uiStates.setNumericThreshold(field.min);
+      uiStates.setNumericThreshold(field.ContinuousConfig.Min);
     },
     [loadedData, continuousFields, loadNumericField, uiStates],
   );
@@ -382,15 +368,15 @@ export default function Vis({
   });
   // [number, number] | null
   const minMaxValue: [number, number] | null =
-    numericField !== null ? [numericField.min, numericField.max] : null;
+    numericField !== null
+      ? [numericField.ContinuousConfig.Min, numericField.ContinuousConfig.Max]
+      : null;
 
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
       <VisHeader
         isLoaded={isLoaded}
-        coloringAnnotation={annotationStates.coloringAnnotation}
-        selectedCategories={annotationStates.selectedCategories}
         showPointCloud={uiStates.showPointCloud}
         onContinuousOpen={() => uiStates.setContinuousOpen(true)}
         onToggleView={toggleDeckGLDisplay}
@@ -414,7 +400,6 @@ export default function Vis({
             onSetAnnotationForColoring={
               annotationStates.setAnnotationForColoring
             }
-            onClearAnnotation={clearAnnotation}
             onSelectedCategoriesChange={annotationStates.setSelectedCategories}
             onHiddenCategoryIdsChange={annotationStates.setHiddenCategoryIds}
           />
@@ -434,9 +419,6 @@ export default function Vis({
               layers={layers}
               loadedData={loadedData}
               loadedAnnotations={loadedAnnotations}
-              // currentTrait={activeContinuous}
-              activeContinuous={activeContinuous}
-              numericField={numericField}
               availableSectionIDs={sectionStates.availableSectionIDs}
               currentSectionID={sectionStates.currentSectionID}
               sectionPreviews={sectionStates.sectionPreviews}

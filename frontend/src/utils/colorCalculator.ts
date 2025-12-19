@@ -88,7 +88,10 @@ export const calculatePointColor = (
 
   // 3. numeric field coloring
   if (extData.numeric) {
-    const { values, min, max } = extData.numeric;
+    const continuounsfield = extData.numeric;
+    const values = continuounsfield.values;
+    const min = continuounsfield.ContinuousConfig.Min;
+    const max = continuounsfield.ContinuousConfig.Max;
     const v = values[index];
 
     if (v < NumericThreshold) {

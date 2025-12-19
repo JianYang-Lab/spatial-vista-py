@@ -34,7 +34,6 @@ interface AnnotationPanelProps {
   // Handlers
   onColorPickerOpen: () => void;
   onSetAnnotationForColoring: (type: AnnotationType) => void;
-  onClearAnnotation: (type: AnnotationType) => void;
   onSelectedCategoriesChange: (
     categories: Record<AnnotationType, number | null>,
   ) => void;
@@ -55,7 +54,6 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
   isLoaded,
   onColorPickerOpen,
   onSetAnnotationForColoring,
-  onClearAnnotation,
   onSelectedCategoriesChange,
   onHiddenCategoryIdsChange,
 }) => {
@@ -130,7 +128,7 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1">
-                  {annotationConfig &&
+                  {/*{annotationConfig &&
                     type !== annotationConfig.DefaultAnnoType && (
                       <Button
                         variant="outline"
@@ -145,7 +143,7 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
                       >
                         <Trash2Icon className="h-4 w-4" />
                       </Button>
-                    )}
+                    )}*/}
 
                   {coloringAnnotation !== type && (
                     <Button

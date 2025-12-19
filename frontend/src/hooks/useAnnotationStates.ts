@@ -1,13 +1,11 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { hexToRgb } from "../utils/helpers";
+// import { hexToRgb } from "../utils/helpers";
 import type {
   CategoryColors,
-  ChartProps,
   ColorParams,
   CustomColors,
   HiddenCategoryIds,
   LoadedData,
-  LogpBarChartProps,
   SelectedCategories,
 } from "../types";
 

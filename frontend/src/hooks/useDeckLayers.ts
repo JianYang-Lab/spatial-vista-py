@@ -2,12 +2,13 @@ import { useMemo } from "react";
 import { PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import type { LayersList } from "@deck.gl/core";
-import type { LayoutMode, NumericField, RGBAColor } from "../types";
+import type { LayoutMode, ContinuousField, RGBAColor } from "../types";
 import {
   calculatePointColor,
   type ColorCalculatorParams,
 } from "../utils/colorCalculator";
 import { LASWorkerLoader } from "@loaders.gl/las";
+import lasWorkerUrl from "@/utils/las-worker.js?url";
 
 interface UseDeckLayersProps {
   showPointCloud: boolean;
@@ -18,11 +19,7 @@ interface UseDeckLayersProps {
   onDataLoad?: (data: any) => void;
   filteredSectionPoints: number[];
   NumericThreshold: number;
-  numericField: {
-    name: string;
-    min: number;
-    max: number;
-  } | null;
+  numericField: ContinuousField | null;
   pointOpacity: number;
   pointSize: number;
   layoutMode: LayoutMode;
@@ -54,20 +51,8 @@ export const useDeckLayers = ({
     }
 
     const dataSource = loadedData ?? lazUrl;
-    // console.log(lazUrl);
-    // console.log(typeof lazUrl);
-    // Attach onDataLoad only when the dataSource is a URL/string and an onDataLoad handler exists.
-    // If dataSource is the parsed object (`loadedData`), do NOT attach onDataLoad.
-    const shouldUseOnDataLoad = typeof dataSource === "string" && !!onDataLoad;
 
-    // console.log(
-    //   "useDeckLayers: dataSourceType",
-    //   typeof dataSource,
-    //   "lazUrl",
-    //   lazUrl,
-    //   "loadedDataExists",
-    //   !!loadedData,
-    // );
+    const shouldUseOnDataLoad = typeof dataSource === "string" && !!onDataLoad;
 
     const layersList: LayersList = [];
 
@@ -82,13 +67,12 @@ export const useDeckLayers = ({
           getNormal: [0, 1, 0],
           extensions: [new DataFilterExtension({ filterSize: 1 })],
           transitions: { getPosition: 800 },
-          // 添加 loaders 配置
           loaders: [LASWorkerLoader],
-          // loadOptions: {
-          //   las: {
-          //     workerUrl: lasWorkerUrl,
-          //   },
-          // },
+          loadOptions: {
+            las: {
+              workerUrl: lasWorkerUrl,
+            },
+          },
           updateTriggers: {
             getColor: [
               numericField?.name,
@@ -137,7 +121,9 @@ export const useDeckLayers = ({
     }
 
     const minMaxValue: [number, number] | null =
-      numericField !== null ? [numericField.min, numericField.max] : null;
+      numericField !== null
+        ? [numericField.ContinuousConfig.Min, numericField.ContinuousConfig.Max]
+        : null;
 
     if (showScatterplot && !showPointCloud && loadedData) {
       layersList.push(
