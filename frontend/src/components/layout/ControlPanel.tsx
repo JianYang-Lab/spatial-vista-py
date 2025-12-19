@@ -20,10 +20,7 @@ import {
   HelpCircleIcon,
 } from "lucide-react";
 
-import {
-  type AnnotationType,
-  ANNOTATION_CONFIG,
-} from "../../config/annotations";
+import { type AnnotationType } from "../../config/annotations";
 import type { ChartProps } from "../../types";
 import { Switch } from "../ui/switch";
 import {
@@ -71,6 +68,8 @@ interface ControlPanelProps {
   onNumericThresholdChange: (threshold: number) => void;
   onResetPointControls: () => void;
   onViewStateUpdate: (viewState: OrbitViewState) => void;
+
+  annotationConfig: any | null;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -96,6 +95,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   // onLogpThresholdChange,
   onResetPointControls,
   onViewStateUpdate,
+  annotationConfig,
 }) => {
   const handleZoomClick = (zoomType: string) => {
     if (activeZoom === zoomType) return;
@@ -172,6 +172,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         coloringAnnotation={coloringAnnotation}
         selectedCategories={selectedCategories}
         viewState={viewState}
+        annotationConfig={annotationConfig}
       />
     </>
   );
@@ -184,6 +185,7 @@ interface InformationSectionProps {
   selectedCategories: Record<AnnotationType, number | null>;
   // showPointCloud: boolean;
   viewState: OrbitViewState;
+  annotationConfig: any | null;
 }
 
 const InformationSection: React.FC<InformationSectionProps> = ({
@@ -191,6 +193,7 @@ const InformationSection: React.FC<InformationSectionProps> = ({
   coloringAnnotation,
   selectedCategories,
   viewState,
+  annotationConfig,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   // get selected categories text
@@ -201,9 +204,9 @@ const InformationSection: React.FC<InformationSectionProps> = ({
       ([annotationType, categoryId]) => {
         if (categoryId !== null) {
           const categoryName =
-            ANNOTATION_CONFIG.annotationMaps[
-              annotationType as AnnotationType
-            ]?.[categoryId];
+            annotationConfig.AnnoMaps?.[annotationType as AnnotationType]?.[
+              categoryId
+            ];
           if (categoryName) {
             selectedItems.push(categoryName);
           } else {

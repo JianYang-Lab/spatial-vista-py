@@ -19,6 +19,8 @@ import { ContinuousSelectionDialog } from "../components/dialogs/ContinuousSelec
 import { ColorPickerDialog } from "../components/dialogs/ColorPickerDialog";
 
 import { useWidgetModel } from "@/widget_context";
+import { parseContinuousArray } from "@/utils/helpers";
+import { decodeFloat16 } from "@/utils/helpers";
 
 export default function Vis({
   onLoad,
@@ -74,18 +76,17 @@ export default function Vis({
       const dv = bins[name] as DataView | undefined;
       if (!dv) continue;
 
-      const values = new Float32Array(
-        dv.buffer,
-        dv.byteOffset,
-        dv.byteLength / 4,
-      );
+      const raw = parseContinuousArray(dv, meta.DType);
+
+      const values =
+        meta.DType === "float16" ? decodeFloat16(raw as Uint16Array) : raw;
 
       parsed[name] = {
         name,
         values,
         min: meta.Min,
         max: meta.Max,
-        source: meta.Source,
+        source: meta.Source, // "obs" | "gene"
       };
     }
 
@@ -188,20 +189,6 @@ export default function Vis({
     };
   }, [model]);
 
-  useEffect(() => {
-    if (!lazUrl) return;
-
-    (window as any).__SPATIALVISTA_LAZURL__ = lazUrl;
-    console.log("Expose lazUrl:", lazUrl);
-    // Additional debug: print a short sample of the url string and current loadedData state
-    try {
-      console.log("Vis debug - lazUrl preview:", lazUrl.slice?.(0, 120));
-    } catch (e) {
-      console.log("Vis debug - lazUrl preview failed", e);
-    }
-    console.log("Vis debug - current loadedData exists:", !!loadedData);
-  }, [lazUrl]);
-
   // Data Manager Hook
   const {
     isLoaded,
@@ -266,6 +253,7 @@ export default function Vis({
     uiStates.showPointCloud,
     uiStates.showScatterplot,
     annotationStates.categoryColors,
+    annotationConfig,
   );
 
   // Layout Mode Hook
@@ -461,6 +449,7 @@ export default function Vis({
               onSectionClick={sectionStates.handleSectionClick}
               onNumericThresholdChange={uiStates.setNumericThreshold}
               onAfterRender={handleAfterRender}
+              annotationConfig={annotationConfig}
             />
           }
         </div>
@@ -500,6 +489,7 @@ export default function Vis({
               uiStates.setNumericThreshold(minMaxValue ? minMaxValue[0] : 0);
             }}
             onViewStateUpdate={viewStates.updateViewState}
+            annotationConfig={annotationConfig}
           />
         </div>
       </div>

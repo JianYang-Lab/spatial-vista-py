@@ -161,9 +161,9 @@ export const useDeckLayers = ({
           opacity: pointOpacity,
           stroked: false,
           filled: true,
-          radiusScale: pointSize * 20,
-          radiusMinPixels: 0.2,
-          radiusMaxPixels: 20,
+          radiusScale: pointSize * 0.1,
+          // radiusMinPixels: 0,
+          // radiusMaxPixels: 20,
           lineWidthMinPixels: 0,
 
           getPosition: (i) => {

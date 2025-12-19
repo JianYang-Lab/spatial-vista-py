@@ -59,6 +59,8 @@ interface VisualizationAreaProps {
   onSectionClick: (sectionID: number) => void;
   onNumericThresholdChange: (threshold: number) => void;
   onAfterRender: ({ gl }: { gl: WebGLRenderingContext }) => void;
+
+  annotationConfig: any | null;
 }
 
 export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
@@ -86,6 +88,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   onSectionClick,
   onNumericThresholdChange,
   onAfterRender,
+  annotationConfig,
 }) => {
   const deckRef = useRef<any>(null);
 
@@ -137,24 +140,28 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         `;
 
       // iter all annos
-      for (const annotationType of loadedAnnotations) {
-        const classification = extData.annotations[annotationType];
+      if (annotationConfig?.AnnoMaps && extData.annotations) {
+        for (const annoType of loadedAnnotations) {
+          const arr = extData.annotations[annoType];
+          if (!arr || index >= arr.length) continue;
 
-        if (classification && classification[index] !== undefined) {
-          const categoryId = classification[index];
-          const categoryName =
-            ANNOTATION_CONFIG.annotationMaps[annotationType] &&
-            ANNOTATION_CONFIG.annotationMaps[annotationType][Number(categoryId)]
-              ? ANNOTATION_CONFIG.annotationMaps[annotationType][
-                  Number(categoryId)
-                ]
-              : `Unknown (${categoryId})`;
+          const code = arr[index];
+          if (code == null) continue;
 
-          // Capitalize first letter of annotationType
+          const items = annotationConfig.AnnoMaps?.[annoType]?.Items;
+          let label = `Unknown (${code})`;
+
+          if (items) {
+            const hit = items.find((it: any) => it.Code === Number(code));
+            if (hit?.Name != null) {
+              label = String(hit.Name);
+            }
+          }
+
           const displayName =
-            annotationType.charAt(0).toUpperCase() + annotationType.slice(1);
+            annoType.charAt(0).toUpperCase() + annoType.slice(1);
 
-          tooltipContent += `<b>${displayName}:</b> ${categoryName}<br/>`;
+          tooltipContent += `<b>${displayName}:</b> ${label}<br/>`;
         }
       }
 
