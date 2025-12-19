@@ -20,7 +20,7 @@ interface AnnotationPanelProps {
   // Data
   annotationConfig: any | null;
   loadedAnnotations: Set<AnnotationType>;
-  coloringAnnotation: AnnotationType;
+  coloringAnnotation: AnnotationType | null;
   selectedCategories: Record<AnnotationType, number | null>;
   hiddenCategoryIds: Record<AnnotationType, Set<number>>;
   categoryColors: Record<
@@ -201,7 +201,7 @@ interface CategoryListProps {
   categoryColors: Record<number, [number, number, number]>;
   customColors: Record<number, string>;
   currentNumericName: string | null;
-  coloringAnnotation: AnnotationType;
+  coloringAnnotation: AnnotationType | null;
   onCategorySelect: (type: AnnotationType, categoryId: number) => void;
   onCategoryToggle: (type: AnnotationType, categoryId: number) => void;
 }

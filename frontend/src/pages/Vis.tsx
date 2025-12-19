@@ -43,7 +43,7 @@ export default function Vis({
   // AnnotaionsConfig Hook
   const [annotationConfig, setAnnotationConfig] = useState<any | null>(null);
   const [annotationBins, setAnnotationBins] = useState<
-    Record<string, Uint8Array | Uint16Array>
+    Record<string, Uint8Array | Uint16Array | Uint32Array>
   >({});
 
   // NumericFiled Hook
@@ -98,22 +98,54 @@ export default function Vis({
     const config = model.get("annotation_config");
     const bins = model.get("annotation_bins");
 
-    console.log("Exposed config", config);
-
     if (!config || !bins) return;
 
-    const parsedBins: Record<string, Uint8Array | Uint16Array> = {};
+    const parsedBins: Record<string, Uint8Array | Uint16Array | Uint32Array> =
+      {};
 
     for (const anno of config.AvailableAnnoTypes) {
-      const dv = bins[anno] as DataView;
+      const dv = bins[anno] as DataView | undefined;
       if (!dv) continue;
 
-      // ⚠️ 假设 uint16；之后可从 config 里带 dtype
-      parsedBins[anno] = new Uint16Array(
-        dv.buffer,
-        dv.byteOffset,
-        dv.byteLength / 2,
-      );
+      const dtype = config.AnnoDtypes?.[anno];
+
+      if (!dtype) {
+        console.warn(
+          `[SpatialVista] Missing AnnoDtypes for annotation "${anno}", skip.`,
+        );
+        continue;
+      }
+
+      switch (dtype) {
+        case "uint8":
+          parsedBins[anno] = new Uint8Array(
+            dv.buffer,
+            dv.byteOffset,
+            dv.byteLength,
+          );
+          break;
+
+        case "uint16":
+          parsedBins[anno] = new Uint16Array(
+            dv.buffer,
+            dv.byteOffset,
+            dv.byteLength / 2,
+          );
+          break;
+
+        case "uint32":
+          parsedBins[anno] = new Uint32Array(
+            dv.buffer,
+            dv.byteOffset,
+            dv.byteLength / 4,
+          );
+          break;
+
+        default:
+          console.error(
+            `[SpatialVista] Unsupported annotation dtype "${dtype}" for "${anno}"`,
+          );
+      }
     }
 
     setAnnotationConfig(config);

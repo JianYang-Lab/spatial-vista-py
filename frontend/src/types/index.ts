@@ -52,7 +52,7 @@ export type NumericField = {
 export interface ExtData {
   originalColor: Uint8Array;
   numeric: NumericField | null;
-  annotations: Record<string, Uint8Array | Uint16Array | null>;
+  annotations: Record<string, Uint8Array | Uint16Array | Uint32Array | null>;
   POSITION: {
     value: Float64Array;
   };

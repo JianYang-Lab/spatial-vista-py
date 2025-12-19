@@ -22,7 +22,7 @@ interface UseDataManagerProps {
   setInitialCamera: (camera: any) => void;
   setActiveZoom: (zoom: string) => void;
   annotationConfig: any | null;
-  annotationBins: Record<string, Uint8Array | Uint16Array>;
+  annotationBins: Record<string, Uint8Array | Uint16Array | Uint32Array>;
 }
 
 export const useDataManager = ({
@@ -194,7 +194,7 @@ export const useDataManager = ({
   const clearAnnotation = useCallback(
     (type: AnnotationType) => {
       // NOT clear default annotation
-      if (type === annotationConfig.defaultType) {
+      if (type === annotationConfig.DefaultAnnoType) {
         return;
       }
 

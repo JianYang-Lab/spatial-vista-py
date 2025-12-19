@@ -27,8 +27,6 @@ export interface UseAnnotationStatesReturn {
   setCustomColors: (colors: CustomColors) => void;
   setAnnotationForColoring: (type: AnnotationType) => void;
 
-  pieChartProps: ChartProps | null;
-  logpBarChartProps: LogpBarChartProps | null;
   colorParams: ColorParams;
 }
 
@@ -39,25 +37,19 @@ export const useAnnotationStates = (
   /* ----------------------------
    * 1. coloring annotation
    * ---------------------------- */
-  const [coloringAnnotation, setColoringAnnotation] =
-    useState<AnnotationType | null>(null);
-
+  const [coloringAnnotation, setColoringAnnotation] = useState<AnnotationType>(
+    "__UNINITIALIZED__" as AnnotationType,
+  );
   useEffect(() => {
     if (!annotationConfig) return;
 
     const { DefaultAnnoType, AvailableAnnoTypes } = annotationConfig;
-    setColoringAnnotation(DefaultAnnoType);
-    // if (AvailableAnnoTypes.includes(DefaultAnnoType)) {
-    //   setColoringAnnotation(DefaultAnnoType);
-    // } else {
-    //   console.warn(
-    //     "[SpatialVista] DefaultAnnoType not in AvailableAnnoTypes, fallback:",
-    //     DefaultAnnoType,
-    //     "→",
-    //     AvailableAnnoTypes[0],
-    //   );
-    //   setColoringAnnotation(AvailableAnnoTypes[0] ?? null);
-    // }
+
+    setColoringAnnotation(
+      AvailableAnnoTypes.includes(DefaultAnnoType)
+        ? DefaultAnnoType
+        : AvailableAnnoTypes[0],
+    );
   }, [annotationConfig]);
 
   /* ----------------------------
@@ -167,17 +159,13 @@ export const useAnnotationStates = (
   /* ----------------------------
    * 6. 切换 annotation
    * ---------------------------- */
-  const setAnnotationForColoring = useCallback(
-    (type: AnnotationType) => {
-      if (!loadedData?.extData?.annotations?.[type]) return;
-      setColoringAnnotation(type);
-      setSelectedCategories((prev) => ({
-        ...prev,
-        [type]: null,
-      }));
-    },
-    [loadedData],
-  );
+  const setAnnotationForColoring = useCallback((type: AnnotationType) => {
+    setColoringAnnotation(type);
+    setSelectedCategories((prev) => ({
+      ...prev,
+      [type]: null,
+    }));
+  }, []);
 
   /* ----------------------------
    * 7. colorParams（deck.gl）
