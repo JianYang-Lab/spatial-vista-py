@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type {
-  CategoryColors,
+  AnnotationConfig,
   ContinuousField,
   LASMesh,
   LoadedData,
@@ -11,15 +11,12 @@ type AnnotationType = string;
 
 interface UseDataManagerProps {
   onLoad?: (data: { count: number; progress: number }) => void;
-  // setCategoryColors: (
-  //   colors: CategoryColors | ((prev: CategoryColors) => CategoryColors),
-  // ) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateViewState: (viewState: any) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setInitialCamera: (camera: any) => void;
   setActiveZoom: (zoom: string) => void;
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
   annotationBins: Record<string, Uint8Array | Uint16Array | Uint32Array>;
 }
 
@@ -45,6 +42,7 @@ export const useDataManager = ({
   >(new Set());
 
   const onDataLoad = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
       console.time("Data load");
       const header = (data as LASMesh).header!;
@@ -102,13 +100,18 @@ export const useDataManager = ({
         onLoad({ count: header.vertexCount, progress: 1 });
       }
 
-      // NOT load trait by default
-      // loadTrait(null, data);
       console.timeEnd("Data load");
     },
-    [annotationConfig],
+    [
+      annotationConfig?.DefaultAnnoType,
+      onLoad,
+      setActiveZoom,
+      setInitialCamera,
+      updateViewState,
+    ],
   );
 
+  // Preload annotations when data or annotation config changes
   useEffect(() => {
     if (!loadedData || !annotationConfig) return;
 
@@ -117,13 +120,11 @@ export const useDataManager = ({
 
     const defaultAnnoType = annotationConfig.DefaultAnnoType;
 
-    // (2) 修正 __default__ key
     if (anns["__default__"] && !anns[defaultAnnoType]) {
       anns[defaultAnnoType] = anns["__default__"];
       delete anns["__default__"];
     }
 
-    // (1) 注入 bins
     if (annotationBins) {
       for (const anno of annotationConfig.AvailableAnnoTypes) {
         if (!anns[anno] && annotationBins[anno]) {
@@ -134,9 +135,8 @@ export const useDataManager = ({
 
     setLoadedAnnotations(new Set(Object.keys(anns)));
 
-    // (3) 初始化 colormap：优先用 config 里显式 Color；若为 null 则从 originalColor 推（只对 defaultAnnoType 做）
-    // 你现在把 regionColorMap 那坨注释了，这里把它放回来
     const items = annotationConfig.AnnoMaps?.[defaultAnnoType]?.Items ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const needInfer = items.some((it: any) => it.Color == null);
 
     if (needInfer && anns[defaultAnnoType] && ext.originalColor) {
@@ -157,29 +157,6 @@ export const useDataManager = ({
       }
     }
   }, [loadedData, annotationConfig, annotationBins]);
-
-  useEffect(() => {
-    if (!loadedData || !annotationConfig) return;
-
-    const anns = loadedData.extData.annotations;
-    let changed = false;
-
-    for (const anno of annotationConfig.AvailableAnnoTypes) {
-      if (!anns[anno] && annotationBins[anno]) {
-        anns[anno] = annotationBins[anno];
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      // ⚠️ 只有在第一次补齐 annotations 时才 set
-      setLoadedAnnotations(new Set(Object.keys(anns)));
-    }
-  }, [loadedData, annotationConfig, annotationBins]);
-
-  const loadAnnotation = useCallback((_type: AnnotationType) => {
-    // annotations are preloaded via widget
-  }, []);
 
   const loadNumericField = useCallback(
     (field: ContinuousField | null, dataObj?: LoadedData) => {
@@ -207,7 +184,6 @@ export const useDataManager = ({
     loadNumericField,
     onDataLoad,
     numericField,
-    loadAnnotation,
     setLoadedData,
   };
 };

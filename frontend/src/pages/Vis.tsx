@@ -21,7 +21,11 @@ import { ColorPickerDialog } from "@/components/dialogs/ColorPickerDialog";
 import { useWidgetModel } from "@/widget_context";
 import { parseContinuousArray } from "@/utils/helpers";
 import { decodeFloat16 } from "@/utils/helpers";
-import type { ContinuousConfig, ContinuousField } from "@/types";
+import type {
+  AnnotationConfig,
+  ContinuousConfig,
+  ContinuousField,
+} from "@/types";
 
 export default function Vis({
   onLoad,
@@ -44,7 +48,8 @@ export default function Vis({
   const [lazUrl, setLazUrl] = useState<string | null>(null);
 
   // AnnotaionsConfig Hook
-  const [annotationConfig, setAnnotationConfig] = useState<any | null>(null);
+  const [annotationConfig, setAnnotationConfig] =
+    useState<AnnotationConfig | null>(null);
   const [annotationBins, setAnnotationBins] = useState<
     Record<string, Uint8Array | Uint16Array | Uint32Array>
   >({});
@@ -192,7 +197,6 @@ export default function Vis({
     numericField,
     loadNumericField,
     onDataLoad,
-    loadAnnotation,
   } = useDataManager({
     onLoad,
     updateViewState: viewStates.updateViewState,
@@ -286,23 +290,16 @@ export default function Vis({
     document.body.removeChild(link);
   }, []);
 
+  // judege if section key existed
+  const hasSections =
+    annotationConfig?.AvailableAnnoTypes.includes("section") ?? false;
+
   // Toggle DeckGL Display
   const toggleDeckGLDisplay = useCallback(async () => {
     if (uiStates.showPointCloud) {
       // turn off DeckGL
       uiStates.setshowPointCloud(false);
-
-      // check if section annotation loaded
-      if (!loadedData?.extData.annotations["section"]) {
-        try {
-          await loadAnnotation("section");
-        } catch (error) {
-          console.error("Failed to load section annotation:", error);
-        }
-      }
-
       const sectionAnnotations = loadedData?.extData.annotations["section"];
-
       // get available section IDs
       if (sectionStates.availableSectionIDs.length === 0) {
         const uniqueSectionIDs = Array.from(new Set(sectionAnnotations)).sort(
@@ -336,19 +333,12 @@ export default function Vis({
       uiStates.setShowScatterplot(false);
       console.log("now loaded anns:", loadedAnnotations);
     }
-  }, [
-    loadedData,
-    loadAnnotation,
-    loadedAnnotations,
-    uiStates,
-    sectionStates,
-    viewStates,
-  ]);
+  }, [loadedData, loadedAnnotations, uiStates, sectionStates, viewStates]);
 
   // Dynamic layers with combined color params
   const colorParams = {
     ...annotationStates.colorParams,
-    NumericThreshold: uiStates.NumericThreshold,
+    NumericThreshold: uiStates.numericThreshold,
   };
 
   const layers = useDeckLayers({
@@ -357,7 +347,7 @@ export default function Vis({
     loadedData,
     onDataLoad,
     filteredSectionPoints: sectionStates.filteredSectionPoints,
-    NumericThreshold: uiStates.NumericThreshold,
+    NumericThreshold: uiStates.numericThreshold,
     numericField,
     pointOpacity: uiStates.pointOpacity,
     pointSize: uiStates.pointSize,
@@ -378,6 +368,7 @@ export default function Vis({
       <VisHeader
         isLoaded={isLoaded}
         showPointCloud={uiStates.showPointCloud}
+        hasSections={hasSections}
         onContinuousOpen={() => uiStates.setContinuousOpen(true)}
         onToggleView={toggleDeckGLDisplay}
         onCapture={captureCurrentImage}
@@ -422,7 +413,7 @@ export default function Vis({
               availableSectionIDs={sectionStates.availableSectionIDs}
               currentSectionID={sectionStates.currentSectionID}
               sectionPreviews={sectionStates.sectionPreviews}
-              NumericThreshold={uiStates.NumericThreshold}
+              NumericThreshold={uiStates.numericThreshold}
               minMaxValue={minMaxValue}
               device={device}
               onViewStateUpdate={viewStates.updateViewState}
@@ -446,8 +437,6 @@ export default function Vis({
             initialCamera={viewStates.initialCamera}
             pointSize={uiStates.pointSize}
             pointOpacity={uiStates.pointOpacity}
-            NumericThreshold={uiStates.NumericThreshold}
-            minMaxLogp={minMaxValue}
             isLoaded={isLoaded}
             currentTrait={activeContinuous}
             coloringAnnotation={annotationStates.coloringAnnotation}
@@ -464,7 +453,6 @@ export default function Vis({
             }}
             onPointSizeChange={uiStates.setPointSize}
             onPointOpacityChange={uiStates.setPointOpacity}
-            onNumericThresholdChange={uiStates.setNumericThreshold}
             onResetPointControls={() => {
               uiStates.setPointSize(1);
               uiStates.setPointOpacity(1);

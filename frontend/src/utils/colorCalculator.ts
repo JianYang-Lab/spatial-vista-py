@@ -1,4 +1,4 @@
-import type { ExtData, RGBAColor } from "../types";
+import type { ColorRGB, ExtData, ColorRGBA } from "../types";
 import { hexToRgb } from "./helpers";
 type AnnotationType = string;
 export interface ColorCalculatorParams {
@@ -7,10 +7,7 @@ export interface ColorCalculatorParams {
   coloringAnnotation: AnnotationType;
   NumericThreshold: number;
   customColors: Record<AnnotationType, Record<number, string>>;
-  categoryColors: Record<
-    AnnotationType,
-    Record<number, [number, number, number]>
-  >;
+  categoryColors: Record<AnnotationType, Record<number, ColorRGB>>;
 }
 
 // get Color func
@@ -30,12 +27,9 @@ export const calculatePointColor = (
     coloringAnnotation: AnnotationType;
     NumericThreshold: number;
     customColors: Record<AnnotationType, Record<number, string>>;
-    categoryColors: Record<
-      AnnotationType,
-      Record<number, [number, number, number]>
-    >;
+    categoryColors: Record<AnnotationType, Record<number, ColorRGB>>;
   },
-): RGBAColor => {
+): ColorRGBA => {
   let shouldFilter = false;
   let shouldShow = true;
 
@@ -83,7 +77,7 @@ export const calculatePointColor = (
   }
 
   if (shouldHide) {
-    return [0, 0, 0, 0];
+    return [0, 0, 0, 5];
   }
 
   // 3. numeric field coloring

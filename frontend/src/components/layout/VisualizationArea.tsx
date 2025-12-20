@@ -12,7 +12,11 @@ import type {
   OrthographicViewState,
 } from "@deck.gl/core";
 import type { Device } from "@luma.gl/core";
-import { type AnnotationType, type ContinuousField } from "@/types";
+import {
+  type AnnotationConfig,
+  type AnnotationType,
+  type LoadedData,
+} from "@/types";
 
 interface VisualizationAreaProps {
   // Basic states
@@ -28,7 +32,7 @@ interface VisualizationAreaProps {
 
   // Data and layers
   layers: LayersList;
-  loadedData: any;
+  loadedData: LoadedData | null;
   loadedAnnotations: Set<AnnotationType>;
   // Section carousel props
   availableSectionIDs: number[];
@@ -50,7 +54,7 @@ interface VisualizationAreaProps {
   onNumericThresholdChange: (threshold: number) => void;
   onAfterRender: ({ gl }: { gl: WebGLRenderingContext }) => void;
 
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
 }
 
 export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
@@ -78,9 +82,11 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   onAfterRender,
   annotationConfig,
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deckRef = useRef<any>(null);
 
   const handleViewStateChange = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ({ viewState: newViewState }: { viewState: any }) => {
       if (showPointCloud) {
         // 3D update view
@@ -117,8 +123,9 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   );
 
   const getTooltip = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ({ coordinate, index, layer }: any) => {
-      if (!coordinate || !layer) return null;
+      if (!coordinate || !layer || !loadedData) return null;
 
       const extData = loadedData.extData;
 
@@ -140,7 +147,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
           let label = `Unknown (${code})`;
 
           if (items) {
-            const hit = items.find((it: any) => it.Code === Number(code));
+            const hit = items.find((it) => it.Code === Number(code));
             if (hit?.Name != null) {
               label = String(hit.Name);
             }
@@ -178,7 +185,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         },
       };
     },
-    [loadedData, loadedAnnotations],
+    [loadedData, annotationConfig?.AnnoMaps, loadedAnnotations],
   );
 
   const handleLogpReset = useCallback(() => {

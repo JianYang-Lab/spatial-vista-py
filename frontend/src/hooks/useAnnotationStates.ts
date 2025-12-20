@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 // import { hexToRgb } from "../utils/helpers";
 import type {
+  AnnotationConfig,
   CategoryColors,
   ColorParams,
+  ColorRGB,
   CustomColors,
   HiddenCategoryIds,
   LoadedData,
@@ -30,7 +32,7 @@ export interface UseAnnotationStatesReturn {
 
 export const useAnnotationStates = (
   loadedData: LoadedData,
-  annotationConfig: any | null,
+  annotationConfig: AnnotationConfig | null,
 ): UseAnnotationStatesReturn => {
   /* ----------------------------
    * 1. coloring annotation
@@ -92,7 +94,7 @@ export const useAnnotationStates = (
     const colors: CategoryColors = {};
     for (const anno of annotationConfig.AvailableAnnoTypes) {
       const items = annotationConfig.AnnoMaps[anno]?.Items ?? [];
-      const cmap: Record<number, [number, number, number]> = {};
+      const cmap: Record<number, ColorRGB> = {};
       for (const item of items) {
         if (item.Color) {
           cmap[item.Code] = item.Color;
@@ -113,9 +115,9 @@ export const useAnnotationStates = (
 
     for (const anno of annotationConfig.AvailableAnnoTypes) {
       const items = annotationConfig.AnnoMaps?.[anno]?.Items ?? [];
-      const cmap: Record<number, [number, number, number]> = {};
+      const cmap: Record<number, ColorRGB> = {};
 
-      const hasExplicitColor = items.some((it: any) => it.Color != null);
+      const hasExplicitColor = items.some((it) => it.Color != null);
 
       if (hasExplicitColor) {
         for (const it of items) {

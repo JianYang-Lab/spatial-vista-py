@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import type { LayersList } from "@deck.gl/core";
-import type { LayoutMode, ContinuousField, RGBAColor } from "../types";
+import type { LayoutMode, ContinuousField, ColorRGBA } from "../types";
 import {
   calculatePointColor,
   type ColorCalculatorParams,
@@ -162,7 +162,7 @@ export const useDeckLayers = ({
             ];
           },
 
-          getFillColor: (i: number): RGBAColor => {
+          getFillColor: (i: number): ColorRGBA => {
             if (!loadedData?.extData) return [0, 0, 0, 0];
             const extData = loadedData.extData;
             return calculatePointColor(i, extData, colorParams);

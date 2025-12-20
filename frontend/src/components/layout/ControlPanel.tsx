@@ -20,7 +20,7 @@ import {
   HelpCircleIcon,
 } from "lucide-react";
 
-import { type AnnotationType } from "@/types";
+import { type AnnotationConfig, type AnnotationType } from "@/types";
 import { Switch } from "../ui/switch";
 import {
   Collapsible,
@@ -44,8 +44,6 @@ interface ControlPanelProps {
   // Point controls
   pointSize: number;
   pointOpacity: number;
-  NumericThreshold: number;
-  minMaxLogp: [number, number] | null;
 
   // States
   isLoaded: boolean;
@@ -60,11 +58,10 @@ interface ControlPanelProps {
   onResetCamera: () => void;
   onPointSizeChange: (size: number) => void;
   onPointOpacityChange: (opacity: number) => void;
-  onNumericThresholdChange: (threshold: number) => void;
   onResetPointControls: () => void;
   onViewStateUpdate: (viewState: OrbitViewState) => void;
 
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -75,8 +72,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   initialCamera,
   pointSize,
   pointOpacity,
-  // logpThreshold,
-  minMaxLogp,
   isLoaded,
   currentTrait,
   coloringAnnotation,
@@ -84,10 +79,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onZoomChange,
   onAutoRotateToggle,
   onLayoutModeToggle,
-  // onResetCamera,
   onPointSizeChange,
   onPointOpacityChange,
-  // onLogpThresholdChange,
   onResetPointControls,
   onViewStateUpdate,
   annotationConfig,
@@ -143,12 +136,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       <PointControlsSection
         pointSize={pointSize}
         pointOpacity={pointOpacity}
-        // logpThreshold={logpThreshold}
-        minMaxLogp={minMaxLogp}
         isLoaded={isLoaded}
         onPointSizeChange={onPointSizeChange}
         onPointOpacityChange={onPointOpacityChange}
-        // onLogpThresholdChange={onLogpThresholdChange}
         onResetPointControls={onResetPointControls}
       />
 
@@ -169,9 +159,8 @@ interface InformationSectionProps {
   currentTrait: string | null;
   coloringAnnotation: AnnotationType | null;
   selectedCategories: Record<AnnotationType, number | null>;
-  // showPointCloud: boolean;
   viewState: OrbitViewState;
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
 }
 
 const InformationSection: React.FC<InformationSectionProps> = ({
@@ -189,10 +178,15 @@ const InformationSection: React.FC<InformationSectionProps> = ({
     Object.entries(selectedCategories).forEach(
       ([annotationType, categoryId]) => {
         if (categoryId !== null) {
+          const annoMap =
+            annotationConfig?.AnnoMaps?.[annotationType as AnnotationType];
           const categoryName =
-            annotationConfig.AnnoMaps?.[annotationType as AnnotationType]?.[
-              categoryId
-            ];
+            annoMap && Array.isArray(annoMap.Items)
+              ? annoMap.Items.find((it) => it?.Code === categoryId)?.Name
+              : annoMap
+                ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ((annoMap as any)[categoryId] ?? undefined)
+                : undefined;
           if (categoryName) {
             selectedItems.push(categoryName);
           } else {
@@ -396,7 +390,6 @@ interface PointControlsSectionProps {
   pointSize: number;
   pointOpacity: number;
   // logpThreshold: number;
-  minMaxLogp: [number, number] | null;
   isLoaded: boolean;
   onPointSizeChange: (size: number) => void;
   onPointOpacityChange: (opacity: number) => void;
@@ -407,12 +400,9 @@ interface PointControlsSectionProps {
 const PointControlsSection: React.FC<PointControlsSectionProps> = ({
   pointSize,
   pointOpacity,
-  // logpThreshold,
-  // minMaxLogp,
   isLoaded,
   onPointSizeChange,
   onPointOpacityChange,
-  // onLogpThresholdChange,
   onResetPointControls,
 }) => (
   <Card className="w-full p-2 rounded-md">

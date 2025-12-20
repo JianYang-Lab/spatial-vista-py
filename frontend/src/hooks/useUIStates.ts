@@ -3,7 +3,6 @@ import { useState } from "react";
 export interface UseUIStatesReturn {
   // Dialog states
   continuousOpen: boolean;
-  annotationOpen: boolean;
   colorPickerOpen: boolean;
 
   // Display states
@@ -13,11 +12,10 @@ export interface UseUIStatesReturn {
   // Point controls
   pointSize: number;
   pointOpacity: number;
-  NumericThreshold: number;
+  numericThreshold: number;
 
   // Actions
   setContinuousOpen: (open: boolean) => void;
-  setAnnotationOpen: (open: boolean) => void;
   setColorPickerOpen: (open: boolean) => void;
   setshowPointCloud: (show: boolean) => void;
   setShowScatterplot: (show: boolean) => void;
@@ -29,7 +27,6 @@ export interface UseUIStatesReturn {
 export const useUIStates = (): UseUIStatesReturn => {
   // Dialog states
   const [continuousOpen, setContinuousOpen] = useState<boolean>(false);
-  const [annotationOpen, setAnnotationOpen] = useState<boolean>(false);
   const [colorPickerOpen, setColorPickerOpen] = useState<boolean>(false);
 
   // Display states
@@ -39,19 +36,17 @@ export const useUIStates = (): UseUIStatesReturn => {
   // Point controls
   const [pointSize, setPointSize] = useState<number>(1);
   const [pointOpacity, setPointOpacity] = useState<number>(1);
-  const [NumericThreshold, setNumericThreshold] = useState<number>(0);
+  const [numericThreshold, setNumericThreshold] = useState<number>(0);
 
   return {
     continuousOpen,
-    annotationOpen,
     colorPickerOpen,
     showPointCloud,
     showScatterplot,
     pointSize,
     pointOpacity,
-    NumericThreshold,
+    numericThreshold,
     setContinuousOpen,
-    setAnnotationOpen,
     setColorPickerOpen,
     setshowPointCloud,
     setShowScatterplot,

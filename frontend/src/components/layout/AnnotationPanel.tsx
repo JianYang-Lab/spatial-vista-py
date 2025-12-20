@@ -7,26 +7,23 @@ import {
 } from "../ui/collapsible";
 import {
   PaletteIcon,
-  Trash2Icon,
   PaintBucketIcon,
   ChevronsDownIcon,
   EyeOffIcon,
   CircleCheckIcon,
 } from "lucide-react";
+import type { AnnotationConfig, AnnotationMapItem, ColorRGB } from "@/types";
 
 type AnnotationType = string;
 
 interface AnnotationPanelProps {
   // Data
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
   loadedAnnotations: Set<AnnotationType>;
   coloringAnnotation: AnnotationType | null;
   selectedCategories: Record<AnnotationType, number | null>;
   hiddenCategoryIds: Record<AnnotationType, Set<number>>;
-  categoryColors: Record<
-    AnnotationType,
-    Record<number, [number, number, number]>
-  >;
+  categoryColors: Record<AnnotationType, Record<number, ColorRGB>>;
   customColors: Record<AnnotationType, Record<number, string>>;
   currentNumericName: string | null;
   isLoaded: boolean;
@@ -128,23 +125,6 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1">
-                  {/*{annotationConfig &&
-                    type !== annotationConfig.DefaultAnnoType && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-6 w-6 p-0 hover:text-red-500"
-                        onClick={() => {
-                          onClearAnnotation(type);
-                          onSetAnnotationForColoring(
-                            annotationConfig.DefaultAnnoType,
-                          );
-                        }}
-                      >
-                        <Trash2Icon className="h-4 w-4" />
-                      </Button>
-                    )}*/}
-
                   {coloringAnnotation !== type && (
                     <Button
                       variant="outline"
@@ -189,14 +169,10 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
 interface CategoryListProps {
   type: AnnotationType;
   // categories: Record<number, string>;
-  categories: Array<{
-    Name: string;
-    Code: number;
-    Color?: [number, number, number] | null;
-  }>;
+  categories: AnnotationMapItem[];
   selectedCategory: number | null;
   hiddenCategories: Set<number>;
-  categoryColors: Record<number, [number, number, number]>;
+  categoryColors: Record<number, ColorRGB>;
   customColors: Record<number, string>;
   currentNumericName: string | null;
   coloringAnnotation: AnnotationType | null;

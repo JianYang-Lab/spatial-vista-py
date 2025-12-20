@@ -4,7 +4,7 @@ import { ScatterplotLayer } from "@deck.gl/layers";
 import type { OrthographicViewState } from "@deck.gl/core";
 // import { ANNOTATION_CONFIG } from "../config/annotations";
 import { MAX_CONCURRENT_PREVIEWS } from "../config/constants";
-import type { CategoryColors, LoadedData } from "../types";
+import type { AnnotationConfig, CategoryColors, LoadedData } from "../types";
 
 export interface UseSectionStatesReturn {
   // States
@@ -25,7 +25,7 @@ export const useSectionStates = (
   showPointCloud: boolean,
   showScatterplot: boolean,
   categoryColors: CategoryColors,
-  annotationConfig: any | null,
+  annotationConfig: AnnotationConfig | null,
 ): UseSectionStatesReturn => {
   const [filteredSectionPoints, setFilteredSectionPoints] = useState<number[]>(
     [],
@@ -235,9 +235,12 @@ export const useSectionStates = (
                   return [positions[index], positions[index + 1], 0];
                 },
                 getFillColor: (i: number): [number, number, number, number] => {
+                  if (!annotationConfig) {
+                    return [180, 180, 180, 255];
+                  }
                   const index = i;
                   const extData = loadedData.extData;
-                  const always_type = annotationConfig.DefaultAnnoType;
+                  const always_type = annotationConfig?.DefaultAnnoType;
                   const currentClassification =
                     extData.annotations[always_type];
 
