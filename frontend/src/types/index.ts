@@ -2,23 +2,21 @@ import { LASWorkerLoader } from "@loaders.gl/las";
 export type LASMesh = (typeof LASWorkerLoader)["dataType"];
 export type LayoutMode = "3d" | "2d-treemap" | "2d-histogram";
 export type AnnotationType = string;
+
 // basic color
 export type ColorRGBA = [number, number, number, number];
 export type ColorRGB = [number, number, number];
-
-// 具体的颜色映射类型别名
 export type CategoryColors = Record<AnnotationType, Record<number, ColorRGB>>;
-// export type CategoryColors = AnnotationColorMap;
-export type CustomColors = Record<AnnotationType, Record<number, string>>;
+export type CustomColors = Record<AnnotationType, Record<number, string>>; // ColorPicker return hex string
 export type SelectedCategories = Record<AnnotationType, number | null>;
 export type HiddenCategoryIds = Record<AnnotationType, Set<number>>;
-export type AnnotationData = Record<AnnotationType, Uint8Array | null>;
+// export type AnnotationData = Record<AnnotationType, Uint8Array | null>;
 
 export interface ColorParams {
   categoryColors: CategoryColors;
   customColors: CustomColors;
-  selectedCategories: Record<AnnotationType, number | null>;
-  hiddenCategoryIds: Record<AnnotationType, Set<number>>;
+  selectedCategories: SelectedCategories;
+  hiddenCategoryIds: HiddenCategoryIds;
   coloringAnnotation: AnnotationType;
 }
 

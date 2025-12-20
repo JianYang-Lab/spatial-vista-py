@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import type { LayersList } from "@deck.gl/core";
-import type { LayoutMode, ContinuousField, ColorRGBA } from "../types";
+import type { LayoutMode, ContinuousField, ColorRGBA } from "@/types";
 import {
   calculatePointColor,
   type ColorCalculatorParams,
-} from "../utils/colorCalculator";
+} from "@/utils/colorCalculator";
 import { LASWorkerLoader } from "@loaders.gl/las";
 import lasWorkerUrl from "@/utils/las-worker.js?url";
 

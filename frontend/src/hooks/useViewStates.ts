@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { OrbitViewState, OrthographicViewState } from "@deck.gl/core";
-import { INITIAL_VIEW_STATE, INITIAL_2D_VIEW_STATE } from "../config/constants";
+import { INITIAL_VIEW_STATE, INITIAL_2D_VIEW_STATE } from "@/config/constants";
 
 export interface UseViewStatesReturn {
   // States

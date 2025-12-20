@@ -2,9 +2,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Deck, OrthographicView } from "@deck.gl/core";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import type { OrthographicViewState } from "@deck.gl/core";
-// import { ANNOTATION_CONFIG } from "../config/annotations";
 import { MAX_CONCURRENT_PREVIEWS } from "../config/constants";
-import type { AnnotationConfig, CategoryColors, LoadedData } from "../types";
+import type { AnnotationConfig, CategoryColors, LoadedData } from "@/types";
 
 export interface UseSectionStatesReturn {
   // States

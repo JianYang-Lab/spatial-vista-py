@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import type { OrbitViewState } from "@deck.gl/core";
-import { Button } from "../ui/button";
-import { Slider } from "../ui/slider";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Label } from "../ui/label";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardAction,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "@/components/ui/card";
 import {
   Rotate3DIcon,
   RefreshCcwIcon,
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { type AnnotationConfig, type AnnotationType } from "@/types";
-import { Switch } from "../ui/switch";
+import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,7 +31,7 @@ import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../ui/hover-card";
+} from "@/components/ui/hover-card";
 
 interface ControlPanelProps {
   // Camera controls

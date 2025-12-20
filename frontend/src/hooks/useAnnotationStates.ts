@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-// import { hexToRgb } from "../utils/helpers";
 import type {
   AnnotationConfig,
   CategoryColors,
@@ -9,7 +8,7 @@ import type {
   HiddenCategoryIds,
   LoadedData,
   SelectedCategories,
-} from "../types";
+} from "@/types";
 
 type AnnotationType = string;
 

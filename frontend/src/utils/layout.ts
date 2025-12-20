@@ -1,4 +1,4 @@
-import type { LoadedData } from "../types";
+import type { LoadedData } from "@/types";
 
 export interface TreemapRect {
   category: number;

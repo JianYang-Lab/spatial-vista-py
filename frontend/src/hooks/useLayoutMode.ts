@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import {
   generateHistogramPositions,
   generateTreemapPositions,
-} from "../utils/layout";
+} from "@/utils/layout";
 import type { OrbitViewState } from "@deck.gl/core";
 
 export interface UseLayoutModeReturn {

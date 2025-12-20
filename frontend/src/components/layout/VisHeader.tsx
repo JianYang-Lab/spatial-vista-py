@@ -1,7 +1,6 @@
 import React from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { SearchIcon, CameraIcon, Layers3Icon, Move3dIcon } from "lucide-react";
-// import { type AnnotationType } from "../../config/annotations";
 
 interface AppHeaderProps {
   // States

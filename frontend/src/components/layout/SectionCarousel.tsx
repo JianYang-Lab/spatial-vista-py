@@ -7,8 +7,8 @@ import {
   CarouselNext,
   CarouselPrevious,
   type CarouselApi,
-} from "../ui/carousel";
-import { Card, CardContent } from "../ui/card";
+} from "@/components/ui//carousel";
+import { Card, CardContent } from "@/components/ui/card";
 
 // section carousel component props
 export interface SectionCarouselProps {

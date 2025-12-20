@@ -1,8 +1,8 @@
 import React, { useRef, useCallback } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { OrbitView, OrthographicView } from "@deck.gl/core";
-import { Button } from "../ui/button";
-import { Slider } from "../ui/slider";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { SectionCarousel } from "./SectionCarousel";
 import { RefreshCwIcon } from "lucide-react";
 import RingLoader from "react-spinners/RingLoader";

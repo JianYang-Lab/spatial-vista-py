@@ -1,10 +1,10 @@
 import React from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui//button";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "../ui/collapsible";
+} from "@/components/ui//collapsible";
 import {
   PaletteIcon,
   PaintBucketIcon,
@@ -12,9 +12,12 @@ import {
   EyeOffIcon,
   CircleCheckIcon,
 } from "lucide-react";
-import type { AnnotationConfig, AnnotationMapItem, ColorRGB } from "@/types";
-
-type AnnotationType = string;
+import type {
+  AnnotationType,
+  AnnotationConfig,
+  AnnotationMapItem,
+  ColorRGB,
+} from "@/types";
 
 interface AnnotationPanelProps {
   // Data

@@ -1,4 +1,4 @@
-import type { ColorRGB, ExtData, ColorRGBA } from "../types";
+import type { ColorRGB, ExtData, ColorRGBA } from "@/types";
 import { hexToRgb } from "./helpers";
 type AnnotationType = string;
 export interface ColorCalculatorParams {

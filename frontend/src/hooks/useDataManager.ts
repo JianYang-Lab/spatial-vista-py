@@ -4,8 +4,8 @@ import type {
   ContinuousField,
   LASMesh,
   LoadedData,
-} from "../types";
-import { INITIAL_VIEW_STATE } from "../config/constants";
+} from "@/types";
+import { INITIAL_VIEW_STATE } from "@/config/constants";
 
 type AnnotationType = string;
 

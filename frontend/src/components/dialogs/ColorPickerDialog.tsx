@@ -6,19 +6,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
-import { ColorPicker } from "../ui/color-picker";
+} from "@/components/ui//dialog";
+import { Button } from "@/components/ui//button";
+import { ColorPicker } from "@/components/ui//color-picker";
 import { EraserIcon } from "lucide-react";
 
-import type { CategoryColors, CustomColors } from "../../types";
-
-type AnnotationType = string;
+import type {
+  AnnotationConfig,
+  CategoryColors,
+  CustomColors,
+  AnnotationType,
+} from "@/types";
 
 interface ColorPickerDialogProps {
   open: boolean;
   coloringAnnotation: AnnotationType | null;
-  annotationConfig: any | null;
+  annotationConfig: AnnotationConfig | null;
 
   categoryColors: CategoryColors;
   customColors: CustomColors;
@@ -64,7 +67,7 @@ export const ColorPickerDialog: React.FC<ColorPickerDialogProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
-              {items.map((item: any) => {
+              {items.map((item) => {
                 const categoryId = item.Code;
                 const name = item.Name;
 
