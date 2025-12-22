@@ -47,8 +47,19 @@ def write_laz(adata, position_key, region_key, path):
     x = coords[:, 0].astype(np.float64)
     y = coords[:, 1].astype(np.float64)
     z = coords[:, 2].astype(np.float64)
-    header.offsets = [x.min(), y.min(), z.min()]
-    header.scales = [0.001, 0.001, 0.001]
+    # header.offsets = [x.min(), y.min(), z.min()]
+
+    mins = coords.min(axis=0)
+    maxs = coords.max(axis=0)
+    span = maxs - mins
+
+    target_int_range = 1e7
+    scales = span / target_int_range
+    scales = np.maximum(scales, 1e-3)
+    header.offsets = mins.tolist()
+    header.scales = scales.tolist()
+
+    # header.scales = [0.001, 0.001, 0.001]
     # header.add_extra_dim(laspy.ExtraBytesParams(name="random", type=np.int32))
     # construct las file
     las = laspy.LasData(header)

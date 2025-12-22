@@ -14,6 +14,7 @@ def vis(
     annotations: list[str] | None = None,
     continuous_obs: list[str] | None = None,
     gene_list: list[str] | None = None,
+    layer: str | None = None,
 ):
     w = SpatialVistaWidget()
 
@@ -39,8 +40,7 @@ def vis(
     # --- continuous genes ---
     if gene_list:
         gene_traits, gene_bins = export_continuous_gene_blob(
-            adata,
-            gene_list,
+            adata, gene_list, layer=layer
         )
         cont_traits.update(gene_traits)
         cont_bins.update(gene_bins)
