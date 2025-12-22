@@ -186,14 +186,6 @@ export const useAnnotationStates = (
     ],
   );
 
-  /* ----------------------------
-   * 8. Pie chart
-   * ---------------------------- */
-
-  /* ----------------------------
-   * 9. LogP bar chart
-   * ---------------------------- */
-
   return {
     coloringAnnotation,
     selectedCategories,

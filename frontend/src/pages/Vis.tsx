@@ -60,6 +60,7 @@ export default function Vis({
   >({});
 
   const [activeContinuous, setActiveContinuous] = useState<string | null>(null);
+
   useEffect(() => {
     if (!model) return;
 
@@ -278,7 +279,7 @@ export default function Vis({
       .toISOString()
       .replace(/:/g, "-")
       .substring(0, 19);
-    link.download = `gsmap3d-vis-${timestamp}.png`;
+    link.download = `spatial-vista-vis-${timestamp}.png`;
 
     // get image data from canvas
     const canvas = glRef.current.canvas as HTMLCanvasElement;
