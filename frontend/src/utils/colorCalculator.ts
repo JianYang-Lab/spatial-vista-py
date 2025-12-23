@@ -105,15 +105,8 @@ export const calculatePointColor = (
   else {
     const currentClassification = extData.annotations[coloringAnnotation];
 
-    // (A) 没有 annotation → 直接用 LAZ 原始颜色
     if (!currentClassification) {
-      const i = index * 4;
-      return [
-        extData.originalColor[i],
-        extData.originalColor[i + 1],
-        extData.originalColor[i + 2],
-        extData.originalColor[i + 3] ?? 255,
-      ];
+      return [200, 200, 200, 255];
     }
 
     const categoryId = currentClassification[index];
@@ -122,7 +115,7 @@ export const calculatePointColor = (
         ? Number(categoryId)
         : null;
 
-    // (B) customColors 优先
+    // (B) customColors
     if (
       numericCategoryId !== null &&
       customColors[coloringAnnotation]?.[numericCategoryId]
@@ -140,13 +133,8 @@ export const calculatePointColor = (
       return [...color, 255];
     }
 
-    // (D) ⭐ 关键：默认 annotation → fallback 到 LAZ 原始 RGBA
-    const i = index * 4;
-    return [
-      extData.originalColor[i],
-      extData.originalColor[i + 1],
-      extData.originalColor[i + 2],
-      extData.originalColor[i + 3] ?? 255,
-    ];
+    // (D) fallback to original color
+
+    return [200, 200, 200, 255];
   }
 };

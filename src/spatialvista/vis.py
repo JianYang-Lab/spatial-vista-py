@@ -19,7 +19,7 @@ def vis(
     w = SpatialVistaWidget()
 
     # --- LAZ ---
-    laz_bytes = write_laz_to_bytes(adata, position_key, region_key)
+    laz_bytes = write_laz_to_bytes(adata, position_key)
 
     # --- categorical annotations ---
     anno_config, anno_bins = export_annotations_blob(

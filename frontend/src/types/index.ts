@@ -53,7 +53,7 @@ export type ContinuousField = {
 };
 
 export interface ExtData {
-  originalColor: Uint8Array;
+  // originalColor: Uint8Array;
   numeric: ContinuousField | null;
   annotations: Record<string, Uint8Array | Uint16Array | Uint32Array | null>;
   POSITION: {

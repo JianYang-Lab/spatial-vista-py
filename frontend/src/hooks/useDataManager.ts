@@ -55,17 +55,11 @@ export const useDataManager = ({
       }
       (data as LASMesh).attributes.POSITION.value = f64Pos;
 
-      const originalColor = data.attributes.COLOR_0.value as Uint8Array;
-      const defaultAnnIds = data.attributes.classification?.value;
-      const defaultAnnoType =
-        annotationConfig?.DefaultAnnoType ?? "__default__";
-
       // only keep originalColor and default annotation
       // logP/other annos will be loaded dynamically later
       (data as LoadedData).extData = {
-        originalColor,
         numeric: null as null | ContinuousField,
-        annotations: defaultAnnIds ? { [defaultAnnoType]: defaultAnnIds } : {},
+        annotations: {},
         POSITION: data.attributes.POSITION,
       };
       data.attributes.COLOR_0 = undefined;
@@ -102,13 +96,7 @@ export const useDataManager = ({
 
       console.timeEnd("Data load");
     },
-    [
-      annotationConfig?.DefaultAnnoType,
-      onLoad,
-      setActiveZoom,
-      setInitialCamera,
-      updateViewState,
-    ],
+    [onLoad, setActiveZoom, setInitialCamera, updateViewState],
   );
 
   // Preload annotations when data or annotation config changes
@@ -118,44 +106,59 @@ export const useDataManager = ({
     const ext = loadedData.extData;
     const anns = (ext.annotations ??= {});
 
-    const defaultAnnoType = annotationConfig.DefaultAnnoType;
+    let changed = false;
 
-    if (anns["__default__"] && !anns[defaultAnnoType]) {
-      anns[defaultAnnoType] = anns["__default__"];
-      delete anns["__default__"];
-    }
-
-    if (annotationBins) {
-      for (const anno of annotationConfig.AvailableAnnoTypes) {
-        if (!anns[anno] && annotationBins[anno]) {
-          anns[anno] = annotationBins[anno];
-        }
+    for (const anno of annotationConfig.AvailableAnnoTypes) {
+      if (!anns[anno] && annotationBins[anno]) {
+        anns[anno] = annotationBins[anno];
+        changed = true;
       }
     }
 
-    setLoadedAnnotations(new Set(Object.keys(anns)));
+    if (changed) {
+      setLoadedAnnotations(new Set(Object.keys(anns)));
 
-    const items = annotationConfig.AnnoMaps?.[defaultAnnoType]?.Items ?? [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const needInfer = items.some((it: any) => it.Color == null);
-
-    if (needInfer && anns[defaultAnnoType] && ext.originalColor) {
-      const ids = anns[defaultAnnoType] as Uint8Array | Uint16Array;
-      const cmap: Record<number, [number, number, number]> = {};
-      const originalColor = ext.originalColor;
-
-      for (let i = 0; i < ids.length; i++) {
-        const code = ids[i];
-        if (cmap[code] !== undefined) continue;
-        const j = i * 4;
-        cmap[code] = [
-          originalColor[j],
-          originalColor[j + 1],
-          originalColor[j + 2],
-        ];
-        if (Object.keys(cmap).length >= items.length) break;
-      }
+      setLoadedData({ ...loadedData });
     }
+
+    // const defaultAnnoType = annotationConfig.DefaultAnnoType;
+
+    // if (anns["__default__"] && !anns[defaultAnnoType]) {
+    //   anns[defaultAnnoType] = anns["__default__"];
+    //   delete anns["__default__"];
+    // }
+
+    // if (annotationBins) {
+    //   for (const anno of annotationConfig.AvailableAnnoTypes) {
+    //     if (!anns[anno] && annotationBins[anno]) {
+    //       anns[anno] = annotationBins[anno];
+    //     }
+    //   }
+    // }
+
+    // setLoadedAnnotations(new Set(Object.keys(anns)));
+
+    // const items = annotationConfig.AnnoMaps?.[defaultAnnoType]?.Items ?? [];
+    // // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // const needInfer = items.some((it: any) => it.Color == null);
+
+    // if (needInfer && anns[defaultAnnoType] && ext.originalColor) {
+    //   const ids = anns[defaultAnnoType] as Uint8Array | Uint16Array;
+    //   const cmap: Record<number, [number, number, number]> = {};
+    //   const originalColor = ext.originalColor;
+
+    //   for (let i = 0; i < ids.length; i++) {
+    //     const code = ids[i];
+    //     if (cmap[code] !== undefined) continue;
+    //     const j = i * 4;
+    //     cmap[code] = [
+    //       originalColor[j],
+    //       originalColor[j + 1],
+    //       originalColor[j + 2],
+    //     ];
+    //     if (Object.keys(cmap).length >= items.length) break;
+    //   }
+    // }
   }, [loadedData, annotationConfig, annotationBins]);
 
   const loadNumericField = useCallback(

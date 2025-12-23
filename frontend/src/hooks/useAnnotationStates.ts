@@ -6,7 +6,6 @@ import type {
   ColorRGB,
   CustomColors,
   HiddenCategoryIds,
-  LoadedData,
   SelectedCategories,
 } from "@/types";
 
@@ -30,7 +29,7 @@ export interface UseAnnotationStatesReturn {
 }
 
 export const useAnnotationStates = (
-  loadedData: LoadedData,
+  // loadedData: LoadedData,
   annotationConfig: AnnotationConfig | null,
 ): UseAnnotationStatesReturn => {
   /* ----------------------------
@@ -87,51 +86,36 @@ export const useAnnotationStates = (
    * ---------------------------- */
   const [categoryColors, setCategoryColors] = useState<CategoryColors>({});
 
+  // useEffect(() => {
+  //   if (!annotationConfig) return;
+
+  //   const colors: CategoryColors = {};
+  //   for (const anno of annotationConfig.AvailableAnnoTypes) {
+  //     const items = annotationConfig.AnnoMaps[anno]?.Items ?? [];
+  //     const cmap: Record<number, ColorRGB> = {};
+  //     for (const item of items) {
+  //       if (item.Color) {
+  //         cmap[item.Code] = item.Color;
+  //       }
+  //     }
+  //     colors[anno] = cmap;
+  //   }
+  //   setCategoryColors(colors);
+  // }, [annotationConfig]);
+
   useEffect(() => {
     if (!annotationConfig) return;
+    // if (!loadedData?.extData?.annotations) return;
 
-    const colors: CategoryColors = {};
-    for (const anno of annotationConfig.AvailableAnnoTypes) {
-      const items = annotationConfig.AnnoMaps[anno]?.Items ?? [];
-      const cmap: Record<number, ColorRGB> = {};
-      for (const item of items) {
-        if (item.Color) {
-          cmap[item.Code] = item.Color;
-        }
-      }
-      colors[anno] = cmap;
-    }
-    setCategoryColors(colors);
-  }, [annotationConfig]);
-
-  useEffect(() => {
-    if (!annotationConfig) return;
-    if (!loadedData?.extData?.annotations) return;
-
-    const ext = loadedData.extData;
-    const anns = ext.annotations;
     const colors: CategoryColors = {};
 
     for (const anno of annotationConfig.AvailableAnnoTypes) {
       const items = annotationConfig.AnnoMaps?.[anno]?.Items ?? [];
       const cmap: Record<number, ColorRGB> = {};
 
-      const hasExplicitColor = items.some((it) => it.Color != null);
-
-      if (hasExplicitColor) {
-        for (const it of items) {
-          if (it.Color) cmap[it.Code] = it.Color;
-        }
-      } else if (anns[anno] && ext.originalColor) {
-        const ids = anns[anno] as Uint8Array | Uint16Array;
-        const oc = ext.originalColor;
-
-        for (let i = 0; i < ids.length; i++) {
-          const code = ids[i];
-          if (cmap[code]) continue;
-          const j = i * 4;
-          cmap[code] = [oc[j], oc[j + 1], oc[j + 2]];
-          if (Object.keys(cmap).length >= items.length) break;
+      for (const it of items) {
+        if (it.Color) {
+          cmap[it.Code] = it.Color;
         }
       }
 
@@ -139,7 +123,7 @@ export const useAnnotationStates = (
     }
 
     setCategoryColors(colors);
-  }, [annotationConfig, loadedData]);
+  }, [annotationConfig]);
 
   /* ----------------------------
    * 5. customColors（用户覆盖）

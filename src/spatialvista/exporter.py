@@ -28,17 +28,17 @@ def name_to_rgb(name: str) -> tuple[int, int, int]:
     return (lift(r), lift(g), lift(b))
 
 
-def write_laz(adata, position_key, region_key, path):
-    df = adata.obs.copy()
-    unique_regions = df[region_key].unique()
+def write_laz(adata, position_key, path):
+    # df = adata.obs.copy()
+    # unique_regions = df[region_key].unique()
 
-    region_colors = {}
-    for name in unique_regions:
-        color = name_to_rgb(name)
-        region_colors[name] = color
+    # region_colors = {}
+    # for name in unique_regions:
+    #     color = name_to_rgb(name)
+    #     region_colors[name] = color
 
     # 2. add colors column
-    colors = np.array([region_colors.get(r, (0, 0, 0)) for r in df[region_key]])
+    # colors = np.array([region_colors.get(r, (0, 0, 0)) for r in df[region_key]])
 
     # add header for LAS file
     header = laspy.LasHeader(point_format=3, version="1.2")
@@ -68,25 +68,29 @@ def write_laz(adata, position_key, region_key, path):
     las.y = y
     las.z = z
 
-    las.red = colors[:, 0]
-    las.green = colors[:, 1]
-    las.blue = colors[:, 2]
+    # las.red = colors[:, 0]
+    # las.green = colors[:, 1]
+    # las.blue = colors[:, 2]
 
-    # las.point_size = sizes
-    regions = df[region_key].unique()
-    region_to_id = {r: i for i, r in enumerate(regions)}
-    print(region_to_id)
-    las.classification = np.array(
-        [region_to_id[r] for r in df[region_key]], dtype=np.uint8
-    )
+    # las.red = (200,)
+    # las.green = (200,)
+    # las.blue = (200,)
+
+    # # las.point_size = sizes
+    # regions = df[region_key].unique()
+    # region_to_id = {r: i for i, r in enumerate(regions)}
+    # print(region_to_id)
+    # las.classification = np.array(
+    #     [region_to_id[r] for r in df[region_key]], dtype=np.uint8
+    # )
 
     # 5. write
     las.write(path)
 
 
-def write_laz_to_bytes(adata, position_key, region_key):
+def write_laz_to_bytes(adata, position_key):
     buffer = io.BytesIO()
-    write_laz(adata, position_key, region_key, buffer)
+    write_laz(adata, position_key, buffer)
     return buffer.getvalue()
 
 

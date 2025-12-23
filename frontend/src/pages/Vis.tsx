@@ -236,7 +236,7 @@ export default function Vis({
   }, [isLoaded, viewStates]);
 
   // Annotation States Hook
-  const annotationStates = useAnnotationStates(loadedData!, annotationConfig);
+  const annotationStates = useAnnotationStates(annotationConfig);
 
   // Section States Hook
   const sectionStates = useSectionStates(
