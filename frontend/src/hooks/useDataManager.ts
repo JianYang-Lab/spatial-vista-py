@@ -4,10 +4,11 @@ import type {
   ContinuousField,
   LASMesh,
   LoadedData,
+  AnnotationType,
 } from "@/types";
 import { INITIAL_VIEW_STATE } from "@/config/constants";
 
-type AnnotationType = string;
+// type AnnotationType = string;
 
 interface UseDataManagerProps {
   onLoad?: (data: { count: number; progress: number }) => void;
@@ -18,6 +19,7 @@ interface UseDataManagerProps {
   setActiveZoom: (zoom: string) => void;
   annotationConfig: AnnotationConfig | null;
   annotationBins: Record<string, Uint8Array | Uint16Array | Uint32Array>;
+  parentWidth?: number | null;
 }
 
 export const useDataManager = ({
@@ -28,6 +30,7 @@ export const useDataManager = ({
   setActiveZoom,
   annotationConfig,
   annotationBins,
+  parentWidth = null,
 }: UseDataManagerProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadedData, setLoadedData] = useState<LoadedData | null>(null);
@@ -67,6 +70,13 @@ export const useDataManager = ({
 
       if (header.boundingBox) {
         const [mins, maxs] = header.boundingBox;
+        console.log("Data bounding box:", mins, maxs);
+        console.log("parentWidth", parentWidth);
+        const widthForZoom =
+          typeof parentWidth === "number" && parentWidth > 0
+            ? parentWidth
+            : window.innerWidth;
+        console.log(" width", widthForZoom);
         updateViewState({
           ...INITIAL_VIEW_STATE,
           target: [
@@ -74,7 +84,7 @@ export const useDataManager = ({
             (mins[1] + maxs[1]) / 2,
             (mins[2] + maxs[2]) / 2,
           ],
-          zoom: Math.log2(window.innerWidth / (maxs[0] - mins[0])) - 1,
+          zoom: Math.log2(widthForZoom / (maxs[0] - mins[0])) - 2,
         });
         setInitialCamera({
           ...INITIAL_VIEW_STATE,
@@ -83,7 +93,7 @@ export const useDataManager = ({
             (mins[1] + maxs[1]) / 2,
             (mins[2] + maxs[2]) / 2,
           ],
-          zoom: Math.log2(window.innerWidth / (maxs[0] - mins[0])) - 1,
+          zoom: Math.log2(widthForZoom / (maxs[0] - mins[0])) - 2,
         });
         setLoadedData(data);
         setIsLoaded(true);
@@ -96,7 +106,7 @@ export const useDataManager = ({
 
       console.timeEnd("Data load");
     },
-    [onLoad, setActiveZoom, setInitialCamera, updateViewState],
+    [onLoad, parentWidth, setActiveZoom, setInitialCamera, updateViewState],
   );
 
   // Preload annotations when data or annotation config changes
@@ -120,45 +130,6 @@ export const useDataManager = ({
 
       setLoadedData({ ...loadedData });
     }
-
-    // const defaultAnnoType = annotationConfig.DefaultAnnoType;
-
-    // if (anns["__default__"] && !anns[defaultAnnoType]) {
-    //   anns[defaultAnnoType] = anns["__default__"];
-    //   delete anns["__default__"];
-    // }
-
-    // if (annotationBins) {
-    //   for (const anno of annotationConfig.AvailableAnnoTypes) {
-    //     if (!anns[anno] && annotationBins[anno]) {
-    //       anns[anno] = annotationBins[anno];
-    //     }
-    //   }
-    // }
-
-    // setLoadedAnnotations(new Set(Object.keys(anns)));
-
-    // const items = annotationConfig.AnnoMaps?.[defaultAnnoType]?.Items ?? [];
-    // // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // const needInfer = items.some((it: any) => it.Color == null);
-
-    // if (needInfer && anns[defaultAnnoType] && ext.originalColor) {
-    //   const ids = anns[defaultAnnoType] as Uint8Array | Uint16Array;
-    //   const cmap: Record<number, [number, number, number]> = {};
-    //   const originalColor = ext.originalColor;
-
-    //   for (let i = 0; i < ids.length; i++) {
-    //     const code = ids[i];
-    //     if (cmap[code] !== undefined) continue;
-    //     const j = i * 4;
-    //     cmap[code] = [
-    //       originalColor[j],
-    //       originalColor[j + 1],
-    //       originalColor[j + 2],
-    //     ];
-    //     if (Object.keys(cmap).length >= items.length) break;
-    //   }
-    // }
   }, [loadedData, annotationConfig, annotationBins]);
 
   const loadNumericField = useCallback(

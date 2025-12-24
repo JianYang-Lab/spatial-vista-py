@@ -37,6 +37,10 @@ export default function Vis({
   // Refs
   const glRef = useRef<WebGLRenderingContext | null>(null);
 
+  // New: reference to visualization container for measuring width
+  const vizContainerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+
   // UI States Hook
   const uiStates = useUIStates();
 
@@ -190,6 +194,29 @@ export default function Vis({
     };
   }, [model]);
 
+  // measure viz container width and keep it updated
+  useEffect(() => {
+    const el = vizContainerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const w = el.clientWidth;
+      setContainerWidth(w > 0 ? w : null);
+    };
+
+    // set initial
+    update();
+
+    // observe resize
+    const ro = new ResizeObserver(() => {
+      update();
+    });
+    ro.observe(el);
+
+    return () => {
+      ro.disconnect();
+    };
+  }, [vizContainerRef]);
   // Data Manager Hook
   const {
     isLoaded,
@@ -205,6 +232,7 @@ export default function Vis({
     setActiveZoom: viewStates.setActiveZoom,
     annotationConfig,
     annotationBins,
+    parentWidth: containerWidth,
   });
 
   const handleSelectContinuous = useCallback(
@@ -226,7 +254,6 @@ export default function Vis({
 
       loadNumericField(field, loadedData);
 
-      // 可选：切换字段时重置阈值
       uiStates.setNumericThreshold(field.ContinuousConfig.Min);
     },
     [loadedData, continuousFields, loadNumericField, uiStates],
@@ -398,7 +425,10 @@ export default function Vis({
         </div>
 
         {/* Visualization Area */}
-        <div className="flex-1 min-w-0 h-full relative lg:w-[70%]">
+        <div
+          className="flex-1 min-w-0 h-full relative lg:w-[70%]"
+          ref={vizContainerRef}
+        >
           {
             <VisualizationArea
               isLoaded={isLoaded}
