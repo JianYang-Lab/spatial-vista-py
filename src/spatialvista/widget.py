@@ -61,6 +61,13 @@ class SpatialVistaWidget(anywidget.AnyWidget):
         help="Continuous trait binary buffers (float32)",
     ).tag(sync=True)
 
+    # ========== Global config (frontend settings) ==========
+    global_config = traitlets.Dict(
+        key_trait=traitlets.Unicode(),
+        value_trait=traitlets.Any(),
+        help="Global configuration passed to frontend (e.g. {'GlobalConfig': {'Height': 600}})",
+    ).tag(sync=True)
+
     def __init__(self, *args, **kwargs):
         self._created_at = time.perf_counter()
         super().__init__(*args, **kwargs)
@@ -73,6 +80,7 @@ class SpatialVistaWidget(anywidget.AnyWidget):
         "annotation_config",
         "continuous_bins",
         "continuous_config",
+        "global_config",
     )
     def _on_trait_change(self, change):
         """
@@ -102,6 +110,16 @@ class SpatialVistaWidget(anywidget.AnyWidget):
                 else:
                     count = len(new)
                 info = {"items": count}
+            elif name == "global_config":
+                if new is None:
+                    info = {}
+                else:
+                    # count top-level keys and include JSON size approximation
+                    try:
+                        # best-effort length for a small config dict
+                        info = {"items": len(new), "repr_len": len(str(new))}
+                    except Exception:
+                        info = {"items": len(new)}
             else:
                 info = {}
         except Exception as e:

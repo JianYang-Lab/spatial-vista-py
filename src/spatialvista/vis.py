@@ -91,6 +91,15 @@ def vis(
     executor = ThreadPoolExecutor(max_workers=_async_workers)
     futures = []
 
+    # --- GlobalConfig (send height to frontend early) ---
+    global_cfg = {"GlobalConfig": {"Height": int(height)}}
+    futures.append(
+        executor.submit(
+            _async_set_trait_and_send, w, "global_config", global_cfg
+        )
+    )
+    logger.info("vis: dispatched async send for global_config: {}", global_cfg)
+
     # --- LAZ ---
     t0 = _now()
     laz_bytes = write_laz_to_bytes(adata, position_key)

@@ -49,6 +49,24 @@ export function mountWidget(el: HTMLElement, model: any) {
     (shadow as any).__spatialvista_styles_injected__ = true;
   }
 
+  // Helper: read global_config from model with fallbacks and extract Height
+  const readHeightFromModel = () => {
+    // prefer snake_case trait name
+    const cfg =
+      model.get("global_config") ??
+      // fallback if some code uses a top-level trait named "GlobalConfig"
+      model.get("GlobalConfig") ??
+      null;
+    // cfg might be:
+    // 1) { GlobalConfig: { Height: 600 } }  <-- what backend sets
+    // 2) { Height: 600 }                     <-- possible simpler shape
+    const height =
+      cfg?.GlobalConfig?.Height ?? cfg?.Height ?? /* default */ 800;
+    return Number.isFinite(height) ? `${height}px` : "800px";
+  };
+
+  const height_style = readHeightFromModel();
+
   // Reuse or create the main container inside shadow
   let container = shadow.getElementById(
     "spatialvista-root-container",
@@ -57,13 +75,30 @@ export function mountWidget(el: HTMLElement, model: any) {
     container = document.createElement("div");
     container.id = "spatialvista-root-container";
     container.style.width = "100%";
-    container.style.height = "800px";
+    container.style.height = height_style;
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.style.position = "relative";
     container.classList.add("light");
     shadow.appendChild(container);
+  } else {
+    // If container already exists, ensure height is up-to-date
+    container.style.height = height_style;
   }
+
+  // Listen for changes to global_config so we can update container height dynamically
+  const updateHeightHandler = () => {
+    try {
+      const hs = readHeightFromModel();
+      if (container) container.style.height = hs;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("mountWidget: failed to update height from model:", e);
+    }
+  };
+  // Register listeners for both possible trait names (primary and fallback)
+  model.on("change:global_config", updateHeightHandler);
+  model.on("change:GlobalConfig", updateHeightHandler);
 
   // Reuse or create the portal root inside shadow
   let portalRoot = shadow.getElementById(
@@ -78,6 +113,7 @@ export function mountWidget(el: HTMLElement, model: any) {
     portalRoot.style.pointerEvents = "none";
     shadow.appendChild(portalRoot);
   }
+
   (window as any).__SPATIALVISTA_DIALOG_PORTAL__ = portalRoot;
 
   // Create or reuse the React root to avoid creating multiple roots / contexts
