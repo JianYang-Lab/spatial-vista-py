@@ -9,6 +9,7 @@ dependencies = [
     "laspy[lazrs]>=2.6.1",
     "loguru>=0.7.3",
     "numpy>=2.2.6",
+    "pandas>=2.3.3",
     "traitlets>=5.14.3",
 ]
 

@@ -1,4 +1,6 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 from loguru import logger
 
@@ -15,6 +17,48 @@ def _now():
     return time.perf_counter()
 
 
+def _size_of_value(v: Any) -> int:
+    if v is None:
+        return 0
+    if isinstance(v, (bytes, bytearray, memoryview)):
+        return len(v)
+    if isinstance(v, dict):
+        # assume dict values are bytes-like for bin traits
+        try:
+            return sum(len(x) for x in v.values())
+        except Exception:
+            return len(v)
+    try:
+        return len(v)
+    except Exception:
+        return 0
+
+
+def _async_set_trait_and_send(
+    widget: SpatialVistaWidget, trait_name: str, value: Any
+):
+    """
+    Background worker: set trait and call send_state for that trait.
+    This function deliberately swallows exceptions and logs them, to avoid crashing the worker.
+    """
+    try:
+        t0 = time.perf_counter()
+        setattr(widget, trait_name, value)
+        # call send_state to trigger trait syncing to frontend
+        widget.send_state(trait_name)
+        dur = time.perf_counter() - t0
+        logger.info(
+            "async_send: trait='{}' size={} took {:.3f}s (dispatched in background)",
+            trait_name,
+            _size_of_value(value),
+            dur,
+        )
+    except Exception as e:
+        logger.exception(
+            "async_send: failed to send trait='{}': {}", trait_name, e
+        )
+
+
 def vis(
     adata,
     position_key: str,
@@ -24,7 +68,13 @@ def vis(
     gene_list: list[str] | None = None,
     layer: str | None = None,
     height: int = 600,  ## height of the widget, unit px
+    _async_workers: int = 2,
+    _wait_for_all_sends: bool = False,
 ):
+    """
+    If _wait_for_all_sends is True, the function will block until all background sends finish.
+    Otherwise it will return the widget immediately while sends may continue in background.
+    """
     start_total = _now()
     logger.info(
         "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={}",
@@ -37,6 +87,10 @@ def vis(
 
     w = SpatialVistaWidget()
 
+    # create a small thread pool for background sends
+    executor = ThreadPoolExecutor(max_workers=_async_workers)
+    futures = []
+
     # --- LAZ ---
     t0 = _now()
     laz_bytes = write_laz_to_bytes(adata, position_key)
@@ -46,10 +100,14 @@ def vis(
         len(laz_bytes),
         t_laz,
     )
-    # immediately attach & sync LAZ so frontend can start receiving it
-    w.laz_bytes = laz_bytes
-    w.send_state("laz_bytes")
-    logger.info("vis: started sync of laz_bytes ({:,} bytes)", len(laz_bytes))
+
+    # dispatch LAZ send in background
+    futures.append(
+        executor.submit(_async_set_trait_and_send, w, "laz_bytes", laz_bytes)
+    )
+    logger.info(
+        "vis: dispatched async send for laz_bytes ({} bytes)", len(laz_bytes)
+    )
 
     # --- categorical annotations ---
     t0 = _now()
@@ -68,12 +126,22 @@ def vis(
         total_anno_bytes,
         t_ann,
     )
-    # immediately attach & sync annotation config + bins
-    w.annotation_config = anno_config
-    w.send_state("annotation_config")
-    w.annotation_bins = anno_bins
-    w.send_state("annotation_bins")
-    logger.info("vis: started sync of annotation_config and annotation_bins")
+
+    # dispatch annotation config and bins asynchronously
+    futures.append(
+        executor.submit(
+            _async_set_trait_and_send, w, "annotation_config", anno_config
+        )
+    )
+    futures.append(
+        executor.submit(
+            _async_set_trait_and_send, w, "annotation_bins", anno_bins
+        )
+    )
+    logger.info(
+        "vis: dispatched async send for annotation_config and annotation_bins ({} bytes)",
+        total_anno_bytes,
+    )
 
     # --- continuous obs ---
     cont_traits = {}
@@ -96,6 +164,22 @@ def vis(
             t_cont,
         )
 
+        # dispatch continuous config and bins asynchronously
+        futures.append(
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_config", cont_traits
+            )
+        )
+        futures.append(
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_bins", cont_bins
+            )
+        )
+        logger.info(
+            "vis: dispatched async send for continuous_config and continuous_bins ({} bytes)",
+            cont_obs_bytes,
+        )
+
     # --- continuous genes ---
     gene_bytes = 0
     if gene_list:
@@ -114,13 +198,46 @@ def vis(
             t_genes,
         )
 
-        # immediately attach & sync continuous config + bins
-        w.continuous_config = cont_traits
-        w.send_state("continuous_config")
-        w.continuous_bins = cont_bins
-        w.send_state("continuous_bins")
-        logger.info(
-            "vis: started sync of annotation_config and annotation_bins"
+        futures.append(
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_config", cont_traits
+            )
         )
+        futures.append(
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_bins", cont_bins
+            )
+        )
+        logger.info(
+            "vis: dispatched async send for updated continuous_config/continuous_bins ({} bytes)",
+            gene_bytes,
+        )
+
+    # Optionally wait for all background sends to finish before returning
+    if _wait_for_all_sends:
+        logger.info(
+            "vis: waiting for {} background send tasks to complete",
+            len(futures),
+        )
+        for fut in as_completed(futures, timeout=None):
+            try:
+                fut.result()
+            except Exception as e:
+                logger.exception("vis: background send task raised: {}", e)
+        logger.info("vis: all background sends completed")
+
+    # shutdown executor but let running tasks finish (daemon threads not used)
+    executor.shutdown(wait=False)
+
+    total_time = _now() - start_total
+    total_bytes = (
+        len(laz_bytes) + total_anno_bytes + cont_obs_bytes + gene_bytes
+    )
+    logger.info(
+        "vis: finished (dispatch phase) total_bytes={} total_time={:.3f}s background_tasks={}",
+        total_bytes,
+        total_time,
+        len(futures),
+    )
 
     return w

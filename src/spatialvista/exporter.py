@@ -6,6 +6,7 @@ import uuid
 
 import laspy
 import numpy as np
+import pandas as pd
 from loguru import logger
 
 
@@ -130,24 +131,43 @@ def export_annotations_blob(
         if anno not in adata.obs:
             raise KeyError(f"Annotation '{anno}' not found in adata.obs")
 
-        values = adata.obs[anno].to_numpy()
+        col = adata.obs[anno]
 
-        cats, codes = np.unique(values, return_inverse=True)
+        # Fast path: if already categorical, use .cat.codes (no factorization cost)
+        try:
+            if pd.api.types.is_categorical_dtype(col.dtype):
+                # categorical: reuse codes and categories directly (no sorting/copy if possible)
+                cats = np.asarray(col.cat.categories)
+                codes = col.cat.codes.to_numpy()
+            else:
+                # use pandas.factorize which is typically faster than np.unique(return_inverse=True)
+                # factorize returns (labels, uniques)
+                labels, uniques = pd.factorize(col.values, sort=False)
+                codes = labels
+                cats = uniques
+        except Exception:
+            # fallback to numpy unique if pandas path fails for some reason
+            values = np.asarray(col)
+            cats, codes = np.unique(values, return_inverse=True)
 
-        if len(cats) < 256:
+        # choose minimal integer dtype
+        n_cats = len(cats)
+        if n_cats < 256:
             codes = codes.astype(np.uint8, copy=False)
             dtype = "uint8"
-        elif len(cats) < 65536:
+        elif n_cats < 65536:
             codes = codes.astype(np.uint16, copy=False)
             dtype = "uint16"
         else:
             codes = codes.astype(np.uint32, copy=False)
             dtype = "uint32"
 
+        # serialize to bytes (this will copy to a bytes object)
         bin_bytes = codes.tobytes(order="C")
         anno_bins[anno] = bin_bytes
         anno_dtypes[anno] = dtype
 
+        # build items (small; categories usually few)
         items = [
             {
                 "Name": str(name),
@@ -156,14 +176,13 @@ def export_annotations_blob(
             }
             for i, name in enumerate(cats)
         ]
-
         anno_maps[anno] = {"Items": items}
 
         duration = _now() - start
         logger.info(
             "export_annotations_blob: anno={} categories={} dtype={} bytes={} took {:.3f}",
             anno,
-            len(cats),
+            n_cats,
             dtype,
             len(bin_bytes),
             duration,
