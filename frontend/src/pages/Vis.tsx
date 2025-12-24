@@ -398,7 +398,7 @@ export default function Vis({
         </div>
 
         {/* Visualization Area */}
-        <div className="flex-1 min-w-0 h-90% relative lg:w-[70%]">
+        <div className="flex-1 min-w-0 h-full relative lg:w-[70%]">
           {
             <VisualizationArea
               isLoaded={isLoaded}

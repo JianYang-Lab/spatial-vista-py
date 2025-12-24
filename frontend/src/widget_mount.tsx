@@ -36,7 +36,7 @@ export function mountWidget(el: HTMLElement, model: any) {
   (el as any).__spatialvista_mounted__ = true;
 
   el.style.width = "100%";
-  el.style.height = "400px";
+  el.style.height = "100%";
 
   // Reuse existing shadowRoot if present, otherwise create one.
   const shadow = (el as any).shadowRoot || el.attachShadow({ mode: "open" });
@@ -57,7 +57,7 @@ export function mountWidget(el: HTMLElement, model: any) {
     container = document.createElement("div");
     container.id = "spatialvista-root-container";
     container.style.width = "100%";
-    container.style.height = "100%";
+    container.style.height = "800px";
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.style.position = "relative";
