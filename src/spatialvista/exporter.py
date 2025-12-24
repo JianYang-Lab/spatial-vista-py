@@ -1,15 +1,30 @@
 # spatialvista/exporter.py
 import hashlib
 import io
+import time
 import uuid
 
 import laspy
 import numpy as np
+from loguru import logger
+
+
+def _now():
+    return time.perf_counter()
 
 
 def write_bin(array, path):
+    start = _now()
     path.parent.mkdir(parents=True, exist_ok=True)
     array.tofile(path)
+    duration = _now() - start
+    try:
+        size = path.stat().st_size
+    except Exception:
+        size = None
+    logger.info(
+        "write_bin: wrote {} bytes to {} in {:.3f}", size, path, duration
+    )
 
 
 def name_to_rgb(name: str) -> tuple[int, int, int]:
@@ -29,17 +44,7 @@ def name_to_rgb(name: str) -> tuple[int, int, int]:
 
 
 def write_laz(adata, position_key, path):
-    # df = adata.obs.copy()
-    # unique_regions = df[region_key].unique()
-
-    # region_colors = {}
-    # for name in unique_regions:
-    #     color = name_to_rgb(name)
-    #     region_colors[name] = color
-
-    # 2. add colors column
-    # colors = np.array([region_colors.get(r, (0, 0, 0)) for r in df[region_key]])
-
+    start = _now()
     # add header for LAS file
     header = laspy.LasHeader(point_format=3, version="1.2")
     # xyz in df['position'], (N,3)
@@ -68,30 +73,26 @@ def write_laz(adata, position_key, path):
     las.y = y
     las.z = z
 
-    # las.red = colors[:, 0]
-    # las.green = colors[:, 1]
-    # las.blue = colors[:, 2]
-
-    # las.red = (200,)
-    # las.green = (200,)
-    # las.blue = (200,)
-
-    # # las.point_size = sizes
-    # regions = df[region_key].unique()
-    # region_to_id = {r: i for i, r in enumerate(regions)}
-    # print(region_to_id)
-    # las.classification = np.array(
-    #     [region_to_id[r] for r in df[region_key]], dtype=np.uint8
-    # )
-
     # 5. write
     las.write(path)
 
+    duration = _now() - start
+    n_points = coords.shape[0]
+    logger.info(
+        "write_laz: wrote {} points to {} in {:.3f}", n_points, path, duration
+    )
+
 
 def write_laz_to_bytes(adata, position_key):
+    start = _now()
     buffer = io.BytesIO()
     write_laz(adata, position_key, buffer)
-    return buffer.getvalue()
+    data = buffer.getvalue()
+    duration = _now() - start
+    logger.info(
+        "write_laz_to_bytes: produced {} bytes in {:.3f}", len(data), duration
+    )
+    return data
 
 
 def export_annotations_blob(
@@ -105,15 +106,27 @@ def export_annotations_blob(
       bins: dict[str, bytes]
     """
 
+    start_total = _now()
+
     if annotations is None:
         annotations = []
     all_annos = list(dict.fromkeys([region_key] + annotations))
+
+    logger.info(
+        "export_annotations_blob: starting export for region_key={}, annotations={}, n_obs={}",
+        region_key,
+        annotations,
+        getattr(adata, "n_obs", len(adata.obs))
+        if hasattr(adata, "obs")
+        else None,
+    )
 
     anno_maps = {}
     anno_bins = {}
     anno_dtypes = {}
 
     for anno in all_annos:
+        start = _now()
         if anno not in adata.obs:
             raise KeyError(f"Annotation '{anno}' not found in adata.obs")
 
@@ -131,7 +144,8 @@ def export_annotations_blob(
             codes = codes.astype(np.uint32, copy=False)
             dtype = "uint32"
 
-        anno_bins[anno] = codes.tobytes(order="C")
+        bin_bytes = codes.tobytes(order="C")
+        anno_bins[anno] = bin_bytes
         anno_dtypes[anno] = dtype
 
         items = [
@@ -145,6 +159,16 @@ def export_annotations_blob(
 
         anno_maps[anno] = {"Items": items}
 
+        duration = _now() - start
+        logger.info(
+            "export_annotations_blob: anno={} categories={} dtype={} bytes={} took {:.3f}",
+            anno,
+            len(cats),
+            dtype,
+            len(bin_bytes),
+            duration,
+        )
+
     config = {
         "Id": str(uuid.uuid4()),
         "AvailableAnnoTypes": all_annos,
@@ -152,6 +176,14 @@ def export_annotations_blob(
         "AnnoMaps": anno_maps,
         "AnnoDtypes": anno_dtypes,
     }
+
+    total_duration = _now() - start_total
+    total_bytes = sum(len(b) for b in anno_bins.values())
+    logger.info(
+        "export_annotations_blob: finished total_bytes={} total_time={:.3f}",
+        total_bytes,
+        total_duration,
+    )
 
     return config, anno_bins
 
@@ -165,10 +197,20 @@ def export_continuous_obs_blob(
       traits: dict
       bins: dict[str, bytes]
     """
+    start_total = _now()
     traits = {}
     bins = {}
 
+    logger.info(
+        "export_continuous_obs_blob: starting export for keys={} n_obs={}",
+        keys,
+        getattr(adata, "n_obs", len(adata.obs))
+        if hasattr(adata, "obs")
+        else None,
+    )
+
     for key in keys:
+        start = _now()
         if key not in adata.obs:
             raise KeyError(f"Continuous obs '{key}' not found in adata.obs")
 
@@ -186,6 +228,25 @@ def export_continuous_obs_blob(
             "Min": float(np.nanmin(vec)),
             "Max": float(np.nanmax(vec)),
         }
+        duration = _now() - start
+        logger.info(
+            "export_continuous_obs_blob: key={} dtype={} bytes={} min={} max={} took {:.3f}",
+            key,
+            "float32",
+            len(bins[key]),
+            traits[key]["Min"],
+            traits[key]["Max"],
+            duration,
+        )
+
+    total_duration = _now() - start_total
+    total_bytes = sum(len(b) for b in bins.values())
+    logger.info(
+        "export_continuous_obs_blob: finished total_keys={} total_bytes={} total_time={:.3f}",
+        len(bins),
+        total_bytes,
+        total_duration,
+    )
 
     return traits, bins
 
@@ -201,12 +262,20 @@ def export_continuous_gene_blob(
       traits: dict
       bins: dict[str, bytes]
     """
+    start_total = _now()
     traits = {}
     bins = {}
 
     X = adata.layers[layer] if layer else adata.X
 
+    logger.info(
+        "export_continuous_gene_blob: starting export for {} genes layer={}",
+        len(genes),
+        layer,
+    )
+
     for gene in genes:
+        start = _now()
         if gene not in adata.var_names:
             raise KeyError(f"Gene '{gene}' not found in adata.var_names")
 
@@ -230,5 +299,25 @@ def export_continuous_gene_blob(
             "Min": float(np.nanmin(vec)),
             "Max": float(np.nanmax(vec)),
         }
+
+        duration = _now() - start
+        logger.info(
+            "export_continuous_gene_blob: gene={} key={} bytes={} min={} max={} took {:.3f}",
+            gene,
+            key,
+            len(bins[key]),
+            traits[key]["Min"],
+            traits[key]["Max"],
+            duration,
+        )
+
+    total_duration = _now() - start_total
+    total_bytes = sum(len(b) for b in bins.values())
+    logger.info(
+        "export_continuous_gene_blob: finished total_genes={} total_bytes={} total_time={:.3f}",
+        len(genes),
+        total_bytes,
+        total_duration,
+    )
 
     return traits, bins
