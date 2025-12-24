@@ -70,8 +70,7 @@ export const useDataManager = ({
 
       if (header.boundingBox) {
         const [mins, maxs] = header.boundingBox;
-        console.log("Data bounding box:", mins, maxs);
-        console.log("parentWidth", parentWidth);
+
         const widthForZoom =
           typeof parentWidth === "number" && parentWidth > 0
             ? parentWidth

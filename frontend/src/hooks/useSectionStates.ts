@@ -261,9 +261,11 @@ export const useSectionStates = (
                   }
                   return [180, 180, 180, 255];
                 },
-                radiusScale: 1,
-                radiusMinPixels: 2,
-                radiusMaxPixels: 4,
+                radiusUnits: "pixels",
+                rediusScale: 2,
+                radiusMinPixels: 0,
+                radiusMaxPixels: 100,
+                lineWidthMinPixels: 0,
               }),
             ],
             onAfterRender: ({ gl: _gl }) => {

@@ -147,9 +147,13 @@ export const useDeckLayers = ({
           opacity: pointOpacity,
           stroked: false,
           filled: true,
-          radiusScale: pointSize * 0.1,
-          // radiusMinPixels: 0,
-          // radiusMaxPixels: 20,
+          // Use pixel units for scatterplot radius so it's not affected by world-coordinate magnitudes.
+          // getRadius returns the radius in pixels. We include getRadius in updateTriggers so changes
+          // to `pointSize` update the layer correctly.
+          radiusUnits: "pixels",
+          getRadius: () => pointSize * 2,
+          radiusMinPixels: 0,
+          radiusMaxPixels: 100,
           lineWidthMinPixels: 0,
 
           getPosition: (i) => {
@@ -177,6 +181,8 @@ export const useDeckLayers = ({
               colorParams.coloringAnnotation,
               colorParams.selectedCategories,
             ],
+            // ensure radius updates when pointSize changes
+            getRadius: [pointSize],
           },
         }),
       );

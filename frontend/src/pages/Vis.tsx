@@ -349,9 +349,13 @@ export default function Vis({
       // force reset 2D view state when switching to 2D
       if (loadedData && loadedData.header && loadedData.header.boundingBox) {
         const [mins, maxs] = loadedData.header.boundingBox;
+        const widthForZoom =
+          typeof containerWidth === "number" && containerWidth > 0
+            ? containerWidth
+            : window.innerWidth;
         viewStates.updateStviewState({
           target: [(mins[0] + maxs[0]) / 2, (mins[1] + maxs[1]) / 2, 0],
-          zoom: Math.log2(window.innerWidth / (maxs[0] - mins[0])) - 1,
+          zoom: Math.log2(widthForZoom / (maxs[0] - mins[0])) - 2,
           minZoom: -10,
           maxZoom: 10,
         });
@@ -361,7 +365,14 @@ export default function Vis({
       uiStates.setShowScatterplot(false);
       console.log("now loaded anns:", loadedAnnotations);
     }
-  }, [loadedData, loadedAnnotations, uiStates, sectionStates, viewStates]);
+  }, [
+    uiStates,
+    loadedData,
+    sectionStates,
+    containerWidth,
+    viewStates,
+    loadedAnnotations,
+  ]);
 
   // Dynamic layers with combined color params
   const colorParams = {
