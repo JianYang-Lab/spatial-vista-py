@@ -1,6 +1,7 @@
 # spatialvista/exporter.py
 import hashlib
 import io
+import sys
 import time
 import uuid
 
@@ -8,6 +9,8 @@ import laspy
 import numpy as np
 import pandas as pd
 from loguru import logger
+
+logger.add(sys.stdout, level="WARNING")
 
 
 def _now():
@@ -98,7 +101,8 @@ def write_laz_to_bytes(adata, position_key):
 
 def export_annotations_blob(
     adata,
-    region_key,
+    color_key,
+    slice_key: str | None = None,
     annotations: list[str] | None = None,
 ):
     """
@@ -111,11 +115,13 @@ def export_annotations_blob(
 
     if annotations is None:
         annotations = []
-    all_annos = list(dict.fromkeys([region_key] + annotations))
+    if slice_key is not None:
+        annotations = [slice_key] + annotations
+    all_annos = list(dict.fromkeys([color_key] + annotations))
 
     logger.info(
         "export_annotations_blob: starting export for region_key={}, annotations={}, n_obs={}",
-        region_key,
+        color_key,
         annotations,
         getattr(adata, "n_obs", len(adata.obs))
         if hasattr(adata, "obs")
@@ -191,7 +197,7 @@ def export_annotations_blob(
     config = {
         "Id": str(uuid.uuid4()),
         "AvailableAnnoTypes": all_annos,
-        "DefaultAnnoType": region_key,
+        "DefaultAnnoType": color_key,
         "AnnoMaps": anno_maps,
         "AnnoDtypes": anno_dtypes,
     }

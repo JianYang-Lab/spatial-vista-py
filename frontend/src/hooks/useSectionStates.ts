@@ -25,6 +25,7 @@ export const useSectionStates = (
   showScatterplot: boolean,
   categoryColors: CategoryColors,
   annotationConfig: AnnotationConfig | null,
+  slicekeyname?: string,
 ): UseSectionStatesReturn => {
   const [filteredSectionPoints, setFilteredSectionPoints] = useState<number[]>(
     [],
@@ -39,15 +40,22 @@ export const useSectionStates = (
   const renderingRef = useRef<Set<number>>(new Set());
   const renderedRef = useRef<Set<number>>(new Set());
 
+  // Determine the slice key to use (prefer passed-in slicekeyname,
+  // then annotationConfig.DefaultAnnoType, then fallback to "section")
+  const sliceKey = slicekeyname ?? "section";
+
+  console.log("Using sliceKey:", sliceKey);
+
   // Filter point function
   const filterSectionPoints = useCallback(() => {
     if (
-      !loadedData?.extData?.annotations?.["section"] ||
+      sliceKey === undefined ||
+      !loadedData?.extData?.annotations?.[sliceKey] ||
       currentSectionID === null
     )
       return;
 
-    const sectionAnnotations = loadedData.extData.annotations["section"];
+    const sectionAnnotations = loadedData.extData.annotations[sliceKey];
 
     console.time(`Filter section ${currentSectionID}`);
     const filteredIndices = Array.from(
@@ -57,7 +65,7 @@ export const useSectionStates = (
     console.timeEnd(`Filter section ${currentSectionID}`);
 
     setFilteredSectionPoints(filteredIndices);
-  }, [loadedData, currentSectionID]);
+  }, [loadedData, currentSectionID, sliceKey]);
 
   // Watch currentSectionID for filter points
   useEffect(() => {
@@ -89,14 +97,14 @@ export const useSectionStates = (
 
     console.log(`Rendering preview for section ${sectionId}...`);
 
-    if (!loadedData?.extData?.annotations?.["section"]) {
+    if (!loadedData?.extData?.annotations?.[sliceKey]) {
       renderingRef.current.delete(sectionId);
       return;
     }
 
     try {
       // filter
-      const sectionAnnotations = loadedData.extData.annotations["section"];
+      const sectionAnnotations = loadedData.extData.annotations[sliceKey];
       const filteredIndices = Array.from(
         { length: sectionAnnotations.length },
         (_, i) => i,
@@ -346,7 +354,7 @@ export const useSectionStates = (
   // render all section previews
   const renderAllSectionPreviews = async () => {
     if (
-      !loadedData?.extData?.annotations?.["section"] ||
+      !loadedData?.extData?.annotations?.[sliceKey] ||
       availableSectionIDs.length === 0
     ) {
       return;

@@ -1,3 +1,4 @@
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -11,6 +12,10 @@ from .exporter import (
     write_laz_to_bytes,
 )
 from .widget import SpatialVistaWidget
+
+logger.remove(0)
+
+logger.add(sys.stdout, level="WARNING")
 
 
 def _now():
@@ -62,7 +67,8 @@ def _async_set_trait_and_send(
 def vis(
     adata,
     position_key: str,
-    region_key: str,
+    color_key: str,
+    slice_key: str | None = None,
     annotations: list[str] | None = None,
     continuous_obs: list[str] | None = None,
     gene_list: list[str] | None = None,
@@ -79,7 +85,7 @@ def vis(
     logger.info(
         "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={}",
         position_key,
-        region_key,
+        color_key,
         len(annotations) if annotations else 0,
         len(continuous_obs) if continuous_obs else 0,
         len(gene_list) if gene_list else 0,
@@ -92,7 +98,9 @@ def vis(
     futures = []
 
     # --- GlobalConfig (send height to frontend early) ---
-    global_cfg = {"GlobalConfig": {"Height": int(height)}}
+    global_cfg = {
+        "GlobalConfig": {"Height": int(height), "SliceKey": slice_key}
+    }
     futures.append(
         executor.submit(
             _async_set_trait_and_send, w, "global_config", global_cfg
@@ -122,7 +130,8 @@ def vis(
     t0 = _now()
     anno_config, anno_bins = export_annotations_blob(
         adata,
-        region_key,
+        color_key,
+        slice_key,
         annotations,
     )
     t_ann = _now() - t0

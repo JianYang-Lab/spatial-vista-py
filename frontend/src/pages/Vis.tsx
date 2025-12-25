@@ -266,12 +266,16 @@ export default function Vis({
   const annotationStates = useAnnotationStates(annotationConfig);
 
   // Section States Hook
+  const slicekey =
+    model.get("global_config")?.GlobalConfig?.SliceKey || "section";
+  console.log("Current slicekey:", slicekey);
   const sectionStates = useSectionStates(
     loadedData!,
     uiStates.showPointCloud,
     uiStates.showScatterplot,
     annotationStates.categoryColors,
     annotationConfig,
+    slicekey,
   );
 
   // Layout Mode Hook
@@ -320,7 +324,7 @@ export default function Vis({
 
   // judege if section key existed
   const hasSections =
-    annotationConfig?.AvailableAnnoTypes.includes("section") ?? false;
+    annotationConfig?.AvailableAnnoTypes.includes(slicekey) ?? false;
 
   // Toggle DeckGL Display
   const toggleDeckGLDisplay = useCallback(async () => {
