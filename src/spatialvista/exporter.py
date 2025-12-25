@@ -1,7 +1,6 @@
 # spatialvista/exporter.py
 import hashlib
 import io
-import sys
 import time
 import uuid
 
@@ -9,8 +8,6 @@ import laspy
 import numpy as np
 import pandas as pd
 from loguru import logger
-
-logger.add(sys.stdout, level="WARNING")
 
 
 def _now():
@@ -47,15 +44,32 @@ def name_to_rgb(name: str) -> tuple[int, int, int]:
     return (lift(r), lift(g), lift(b))
 
 
-def write_laz(adata, position_key, path):
+def write_laz(adata, position_key, path, mode: str = "3D"):
     start = _now()
     # add header for LAS file
     header = laspy.LasHeader(point_format=3, version="1.2")
     # xyz in df['position'], (N,3)
     coords = np.asanyarray(adata.obsm[position_key])
+
+    ## check if coords has 3 dimensions, if not bu in 2D mode, add z
+    if (coords.shape[1] != 3) & (mode == "2D"):
+        print(f"Adding z dimension{coords.shape[1]},mode{mode}")
+        coords = np.hstack(
+            (coords, np.zeros((coords.shape[0], 1), dtype=np.float64))
+        )
+
     x = coords[:, 0].astype(np.float64)
     y = coords[:, 1].astype(np.float64)
     z = coords[:, 2].astype(np.float64)
+    if (coords.shape[1] == 3) & (mode == "2D"):
+        z = np.zeros_like(x, dtype=np.float64)
+
+    # If mode is "2D", set z to 0; otherwise use original z
+    # if mode == "2D":
+    #     z = np.zeros_like(x, dtype=np.float64)
+    # else:
+    #     z = coords[:, 2].astype(np.float64)
+
     # header.offsets = [x.min(), y.min(), z.min()]
 
     mins = coords.min(axis=0)
@@ -65,6 +79,18 @@ def write_laz(adata, position_key, path):
     target_int_range = 1e7
     scales = span / target_int_range
     scales = np.maximum(scales, 1e-3)
+    # ## if 2D and sacles is 2-shape, add z scale
+    # if mode == "2D" and scales.shape == (2,):
+    #     scales = np.append(scales, 1)
+    # ## if 2D and mins
+    # if mode == "2D" and mins.shape == (2,):
+    #     mins = np.append(mins, 0)
+
+    if mode == "2D":
+        ## change third scale to 1
+        scales[2] = 1
+        mins[2] = 0
+    print(scales)
     header.offsets = mins.tolist()
     header.scales = scales.tolist()
 
@@ -83,18 +109,25 @@ def write_laz(adata, position_key, path):
     duration = _now() - start
     n_points = coords.shape[0]
     logger.info(
-        "write_laz: wrote {} points to {} in {:.3f}", n_points, path, duration
+        "write_laz: wrote {} points to {} in {:.3f} (mode={})",
+        n_points,
+        path,
+        duration,
+        mode,
     )
 
 
-def write_laz_to_bytes(adata, position_key):
+def write_laz_to_bytes(adata, position_key, mode: str = "3D"):
     start = _now()
     buffer = io.BytesIO()
-    write_laz(adata, position_key, buffer)
+    write_laz(adata, position_key, buffer, mode=mode)
     data = buffer.getvalue()
     duration = _now() - start
     logger.info(
-        "write_laz_to_bytes: produced {} bytes in {:.3f}", len(data), duration
+        "write_laz_to_bytes: produced {} bytes in {:.3f} (mode={})",
+        len(data),
+        duration,
+        mode,
     )
     return data
 

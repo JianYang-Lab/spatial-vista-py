@@ -68,27 +68,39 @@ def vis(
     adata,
     position_key: str,
     color_key: str,
-    slice_key: str | None = None,
+    slice_key: str
+    | None = None,  ## slice key for section-based 2D view (only used when mode="3D")
     annotations: list[str] | None = None,
     continuous_obs: list[str] | None = None,
     gene_list: list[str] | None = None,
     layer: str | None = None,
     height: int = 600,  ## height of the widget, unit px
+    mode: str = "3D",  ## visualization mode: "3D" or "2D"
     _async_workers: int = 2,
     _wait_for_all_sends: bool = False,
 ):
     """
     If _wait_for_all_sends is True, the function will block until all background sends finish.
     Otherwise it will return the widget immediately while sends may continue in background.
+
+    Parameters
+    ----------
+    mode : str, default "3D"
+        Visualization mode. "3D" for 3D point cloud, "2D" for 2D projection (z=0).
+    slice_key : str, optional
+        Annotation key for section slicing (only relevant when mode="3D" and switching to 2D slice view in UI).
+        Ignored when mode="2D".
     """
     start_total = _now()
     logger.info(
-        "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={}",
+        "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
         position_key,
         color_key,
         len(annotations) if annotations else 0,
         len(continuous_obs) if continuous_obs else 0,
         len(gene_list) if gene_list else 0,
+        mode,
+        slice_key if mode == "3D" else "(ignored in 2D mode)",
     )
 
     w = SpatialVistaWidget()
@@ -97,9 +109,14 @@ def vis(
     executor = ThreadPoolExecutor(max_workers=_async_workers)
     futures = []
 
-    # --- GlobalConfig (send height to frontend early) ---
+    # --- GlobalConfig (send height + mode to frontend early) ---
     global_cfg = {
-        "GlobalConfig": {"Height": int(height), "SliceKey": slice_key}
+        "GlobalConfig": {
+            "Height": int(height),
+            "Mode": mode,
+            # if mode is "2D", slice_key is not relevant; frontend can check Mode
+            "SliceKey": slice_key if mode == "3D" else None,
+        }
     }
     futures.append(
         executor.submit(
@@ -110,7 +127,7 @@ def vis(
 
     # --- LAZ ---
     t0 = _now()
-    laz_bytes = write_laz_to_bytes(adata, position_key)
+    laz_bytes = write_laz_to_bytes(adata, position_key, mode=mode)
     t_laz = _now() - t0
     logger.info(
         "vis: write_laz_to_bytes produced {} bytes in {:.3f}s",
