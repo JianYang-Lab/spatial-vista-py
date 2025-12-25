@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { OrbitViewState, OrthographicViewState } from "@deck.gl/core";
 import { INITIAL_VIEW_STATE, INITIAL_2D_VIEW_STATE } from "@/config/constants";
+import type { LayoutMode } from "@/types";
 
 export interface UseViewStatesReturn {
   // States
@@ -9,7 +10,7 @@ export interface UseViewStatesReturn {
   initialCamera: OrbitViewState;
   activeZoom: string | null;
   autoRotate: boolean;
-  layoutMode: "3d" | "2d-treemap" | "2d-histogram";
+  layoutMode: LayoutMode;
 
   // Actions
   updateViewState: (viewState: OrbitViewState) => void;
@@ -17,7 +18,7 @@ export interface UseViewStatesReturn {
   setInitialCamera: (camera: OrbitViewState) => void;
   setActiveZoom: (zoom: string | null) => void;
   setAutoRotate: (autoRotate: boolean) => void;
-  setLayoutMode: (mode: "3d" | "2d-treemap" | "2d-histogram") => void;
+  setLayoutMode: (mode: LayoutMode) => void;
   toggleAutoRotate: () => void;
   setIsLoaded: (isLoaded: boolean) => void;
 }
@@ -38,9 +39,7 @@ export const useViewStates = (): UseViewStatesReturn => {
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
   // Layout transition states
-  const [layoutMode, setLayoutMode] = useState<
-    "3d" | "2d-treemap" | "2d-histogram"
-  >("3d");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("3d");
 
   // Auto rotate camera effect
   useEffect(() => {

@@ -48,6 +48,42 @@ export default function Vis({
   const viewStates = useViewStates(); // Will be updated by data manager
 
   const model = useWidgetModel();
+  // Read global_config from model and track changes
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [globalConfig, setGlobalConfig] = useState<any | null>(() =>
+    model
+      ? (model.get("global_config") ?? model.get("GlobalConfig") ?? null)
+      : null,
+  );
+
+  useEffect(() => {
+    if (!model) return;
+    const handler = () =>
+      setGlobalConfig(
+        model.get("global_config") ?? model.get("GlobalConfig") ?? null,
+      );
+
+    model.on("change:global_config", handler);
+    model.on("change:GlobalConfig", handler);
+    handler(); // pick up initial value
+
+    return () => {
+      model.off("change:global_config", handler);
+      model.off("change:GlobalConfig", handler);
+    };
+  }, [model]);
+
+  // Extract mode and sliceKey from globalConfig
+  const mode = globalConfig?.GlobalConfig?.Mode ?? "3D"; // default to "3D"
+  useEffect(() => {
+    if (mode === "2D") {
+      viewStates.setLayoutMode("2d");
+    } else {
+      // mode === "3D": default behavior (point cloud)
+      uiStates.setshowPointCloud(true);
+      uiStates.setShowScatterplot(false);
+    }
+  }, [mode, uiStates, viewStates]);
   // laz URL State
   const [lazUrl, setLazUrl] = useState<string | null>(null);
 
@@ -268,7 +304,6 @@ export default function Vis({
   // Section States Hook
   const slicekey =
     model.get("global_config")?.GlobalConfig?.SliceKey || "section";
-  console.log("Current slicekey:", slicekey);
   const sectionStates = useSectionStates(
     loadedData!,
     uiStates.showPointCloud,
@@ -324,7 +359,9 @@ export default function Vis({
 
   // judege if section key existed
   const hasSections =
-    annotationConfig?.AvailableAnnoTypes.includes(slicekey) ?? false;
+    mode === "3D" &&
+    slicekey &&
+    annotationConfig?.AvailableAnnoTypes.includes(slicekey);
 
   // Toggle DeckGL Display
   const toggleDeckGLDisplay = useCallback(async () => {

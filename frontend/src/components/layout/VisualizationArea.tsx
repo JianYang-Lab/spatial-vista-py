@@ -15,6 +15,7 @@ import type { Device } from "@luma.gl/core";
 import {
   type AnnotationConfig,
   type AnnotationType,
+  type LayoutMode,
   type LoadedData,
 } from "@/types";
 
@@ -23,7 +24,7 @@ interface VisualizationAreaProps {
   isLoaded: boolean;
   showPointCloud: boolean;
   showScatterplot: boolean;
-  layoutMode: "3d" | "2d-treemap" | "2d-histogram";
+  layoutMode: LayoutMode;
 
   // View states
   viewState: OrbitViewState;

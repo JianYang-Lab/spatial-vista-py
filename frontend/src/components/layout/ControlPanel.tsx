@@ -20,7 +20,11 @@ import {
   HelpCircleIcon,
 } from "lucide-react";
 
-import { type AnnotationConfig, type AnnotationType } from "@/types";
+import {
+  type AnnotationConfig,
+  type AnnotationType,
+  type LayoutMode,
+} from "@/types";
 import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
@@ -37,7 +41,7 @@ interface ControlPanelProps {
   // Camera controls
   activeZoom: string | null;
   autoRotate: boolean;
-  layoutMode: "3d" | "2d-treemap" | "2d-histogram";
+  layoutMode: LayoutMode;
   viewState: OrbitViewState;
   initialCamera: OrbitViewState;
 
@@ -272,7 +276,7 @@ const InformationSection: React.FC<InformationSectionProps> = ({
 interface CameraControlsSectionProps {
   activeZoom: string | null;
   autoRotate: boolean;
-  layoutMode: "3d" | "2d-treemap" | "2d-histogram";
+  layoutMode: LayoutMode;
   currentTrait: string | null;
   isLoaded: boolean;
   onZoomClick: (zoom: string) => void;
@@ -345,40 +349,44 @@ const CameraControlsSection: React.FC<CameraControlsSectionProps> = ({
             </span>
           </Button>
           {/* Switch for auto-rotate*/}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="autoRotate"
-              checked={autoRotate}
-              defaultChecked={false}
-              onCheckedChange={onAutoRotateToggle}
-            />
-            <Label htmlFor="autoRotate">
-              <span className="flex items-center gap-1">
-                <Rotate3DIcon className="h-4 w-4" />
-                AutoRotate
-              </span>
-            </Label>
-          </div>
+          {layoutMode === "3d" && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="autoRotate"
+                checked={autoRotate}
+                defaultChecked={false}
+                onCheckedChange={onAutoRotateToggle}
+              />
+              <Label htmlFor="autoRotate">
+                <span className="flex items-center gap-1">
+                  <Rotate3DIcon className="h-4 w-4" />
+                  AutoRotate
+                </span>
+              </Label>
+            </div>
+          )}
           {/* Layout Mode Toggle */}
-          <div className="flex justify-between items-center">
-            <Button
-              variant={layoutMode === "2d-treemap" ? "default" : "outline"}
-              size="sm"
-              onClick={onLayoutModeToggle}
-              disabled={!isLoaded}
-            >
-              <span className="flex items-center gap-1">
-                <ChartScatterIcon className="h-4 w-4" />
-                {layoutMode === "3d"
-                  ? currentTrait
-                    ? "3D → Histogram"
-                    : "3D → Treemap"
-                  : layoutMode === "2d-histogram"
-                    ? "Histogram → 3D"
-                    : "Treemap → 3D"}
-              </span>
-            </Button>
-          </div>
+          {layoutMode !== "2d" && (
+            <div className="flex justify-between items-center">
+              <Button
+                variant={layoutMode === "2d-treemap" ? "default" : "outline"}
+                size="sm"
+                onClick={onLayoutModeToggle}
+                disabled={!isLoaded}
+              >
+                <span className="flex items-center gap-1">
+                  <ChartScatterIcon className="h-4 w-4" />
+                  {layoutMode === "3d"
+                    ? currentTrait
+                      ? "3D → Histogram"
+                      : "3D → Treemap"
+                    : layoutMode === "2d-histogram"
+                      ? "Histogram → 3D"
+                      : "Treemap → 3D"}
+                </span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </CardContent>

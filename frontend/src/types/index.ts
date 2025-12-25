@@ -1,6 +1,6 @@
 import { LASWorkerLoader } from "@loaders.gl/las";
 export type LASMesh = (typeof LASWorkerLoader)["dataType"];
-export type LayoutMode = "3d" | "2d-treemap" | "2d-histogram";
+export type LayoutMode = "3d" | "2d-treemap" | "2d-histogram" | "2d";
 export type AnnotationType = string;
 
 // basic color

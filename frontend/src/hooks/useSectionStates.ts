@@ -44,8 +44,6 @@ export const useSectionStates = (
   // then annotationConfig.DefaultAnnoType, then fallback to "section")
   const sliceKey = slicekeyname ?? "section";
 
-  console.log("Using sliceKey:", sliceKey);
-
   // Filter point function
   const filterSectionPoints = useCallback(() => {
     if (

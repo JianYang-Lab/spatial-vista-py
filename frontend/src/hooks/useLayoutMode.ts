@@ -4,6 +4,7 @@ import {
   generateTreemapPositions,
 } from "@/utils/layout";
 import type { OrbitViewState } from "@deck.gl/core";
+import type { LayoutMode } from "@/types";
 
 export interface UseLayoutModeReturn {
   // States
@@ -15,8 +16,8 @@ export interface UseLayoutModeReturn {
 }
 
 export const useLayoutMode = (
-  layoutMode: "3d" | "2d-treemap" | "2d-histogram",
-  setLayoutMode: (mode: "3d" | "2d-treemap" | "2d-histogram") => void,
+  layoutMode: LayoutMode,
+  setLayoutMode: (mode: LayoutMode) => void,
   currentTrait: string | null,
   coloringAnnotation: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,7 +32,7 @@ export const useLayoutMode = (
 
   // Toggle layout mode between 3D and 2D treemap
   const toggleLayoutMode = useCallback(() => {
-    if (layoutMode === "3d" && coloringAnnotation) {
+    if ((layoutMode === "3d" || layoutMode === "2d") && coloringAnnotation) {
       if (currentTrait) {
         const histogramPos = generateHistogramPositions(
           loadedData,
