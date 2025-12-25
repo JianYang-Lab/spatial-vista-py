@@ -194,6 +194,8 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
     }
   }, [minMaxValue, onNumericThresholdChange]);
 
+  const numericName = loadedData?.extData?.numeric?.name ?? null;
+
   return (
     <>
       {/* Loading Overlay */}
@@ -252,6 +254,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
             style={{ minWidth: "80%", backdropFilter: "blur(8px)" }}
           >
             <LogpControls
+              Name={numericName}
               NumericThreshold={NumericThreshold}
               minMaxLogp={minMaxValue}
               isLoaded={isLoaded}
@@ -279,6 +282,7 @@ const LoadingOverlay: React.FC = () => (
 
 // LogP Controls Sub-component
 interface LogpControlsProps {
+  Name: string | null | undefined;
   NumericThreshold: number;
   minMaxLogp: [number, number];
   isLoaded: boolean;
@@ -287,6 +291,7 @@ interface LogpControlsProps {
 }
 
 const LogpControls: React.FC<LogpControlsProps> = ({
+  Name,
   NumericThreshold,
   minMaxLogp,
   isLoaded,
@@ -296,7 +301,8 @@ const LogpControls: React.FC<LogpControlsProps> = ({
   <div className="flex items-center space-x-3">
     {/* LogP Threshold label and value */}
     <div className="text-sm font-medium whitespace-nowrap">
-      LogP: <span className="font-bold">{NumericThreshold.toFixed(2)}</span>
+      {Name ?? "Value"}:{" "}
+      <span className="font-bold">{NumericThreshold.toFixed(2)}</span>
     </div>
 
     {/* Min value */}
