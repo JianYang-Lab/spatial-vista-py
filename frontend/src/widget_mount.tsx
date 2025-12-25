@@ -20,7 +20,10 @@ export function mountWidget(el: HTMLElement, model: any) {
       if (existingRoot) {
         existingRoot.render(
           <WidgetModelContext.Provider value={model}>
-            <ThemeProvider defaultTheme="light" storageKey="spatialvista-theme">
+            <ThemeProvider
+              defaultTheme="jupyter"
+              storageKey="spatialvista-theme"
+            >
               <Vis />
             </ThemeProvider>
           </WidgetModelContext.Provider>,
@@ -67,6 +70,17 @@ export function mountWidget(el: HTMLElement, model: any) {
 
   const height_style = readHeightFromModel();
 
+  // Helper: read jupyter theme from body attribute
+  const getJupyterTheme = () => {
+    try {
+      const name = document.body.getAttribute("data-jp-theme-name");
+      if (!name) return "light";
+      return name.toLowerCase().includes("dark") ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  };
+
   // Reuse or create the main container inside shadow
   let container = shadow.getElementById(
     "spatialvista-root-container",
@@ -79,11 +93,19 @@ export function mountWidget(el: HTMLElement, model: any) {
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.style.position = "relative";
-    container.classList.add("light");
+
+    // set initial theme class based on Jupyter (fallback to light)
+    const initTheme = getJupyterTheme();
+    container.classList.add(initTheme);
+
     shadow.appendChild(container);
   } else {
     // If container already exists, ensure height is up-to-date
     container.style.height = height_style;
+    // ensure theme class exists
+    const initTheme = getJupyterTheme();
+    container.classList.remove("light", "dark");
+    container.classList.add(initTheme);
   }
 
   // Listen for changes to global_config so we can update container height dynamically
@@ -99,6 +121,37 @@ export function mountWidget(el: HTMLElement, model: any) {
   // Register listeners for both possible trait names (primary and fallback)
   model.on("change:global_config", updateHeightHandler);
   model.on("change:GlobalConfig", updateHeightHandler);
+
+  // Observe Jupyter theme changes and sync container class (avoid installing multiple observers)
+  if (!(shadow as any).__spatialvista_theme_observer_installed__) {
+    try {
+      const body = document.body;
+      const mo = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (
+            m.type === "attributes" &&
+            m.attributeName === "data-jp-theme-name"
+          ) {
+            const name = document.body.getAttribute("data-jp-theme-name");
+            const theme =
+              name && name.toLowerCase().includes("dark") ? "dark" : "light";
+            const c = shadow.getElementById("spatialvista-root-container");
+            if (c) {
+              c.classList.remove("light", "dark");
+              c.classList.add(theme);
+            }
+          }
+        }
+      });
+      mo.observe(body, {
+        attributes: true,
+        attributeFilter: ["data-jp-theme-name"],
+      });
+      (shadow as any).__spatialvista_theme_observer_installed__ = true;
+    } catch (e) {
+      // ignore if MutationObserver unsupported
+    }
+  }
 
   // Reuse or create the portal root inside shadow
   let portalRoot = shadow.getElementById(
@@ -122,7 +175,7 @@ export function mountWidget(el: HTMLElement, model: any) {
     (el as any).__spatialvista_root__ = root;
     root.render(
       <WidgetModelContext.Provider value={model}>
-        <ThemeProvider defaultTheme="light" storageKey="spatialvista-theme">
+        <ThemeProvider defaultTheme="jupyter" storageKey="spatialvista-theme">
           <Vis />
         </ThemeProvider>
       </WidgetModelContext.Provider>,
@@ -132,7 +185,7 @@ export function mountWidget(el: HTMLElement, model: any) {
     try {
       (el as any).__spatialvista_root__.render(
         <WidgetModelContext.Provider value={model}>
-          <ThemeProvider defaultTheme="light" storageKey="spatialvista-theme">
+          <ThemeProvider defaultTheme="jupyter" storageKey="spatialvista-theme">
             <Vis />
           </ThemeProvider>
         </WidgetModelContext.Provider>,
@@ -148,7 +201,7 @@ export function mountWidget(el: HTMLElement, model: any) {
       (el as any).__spatialvista_root__ = root;
       root.render(
         <WidgetModelContext.Provider value={model}>
-          <ThemeProvider defaultTheme="light" storageKey="spatialvista-theme">
+          <ThemeProvider defaultTheme="jupyter" storageKey="spatialvista-theme">
             <Vis />
           </ThemeProvider>
         </WidgetModelContext.Provider>,
