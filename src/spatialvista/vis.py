@@ -62,12 +62,12 @@ def _async_set_trait_and_send(
 
 def vis(
     adata,
-    position_key: str,
-    color_key: str,
-    slice_key: Optional[str] = None,
+    position: str,
+    color: str,
+    slice: Optional[str] = None,
     annotations: Optional[list[str]] = None,
-    continuous_obs: Optional[list[str]] = None,
-    gene_list: Optional[list[str]] = None,
+    continuous: Optional[list[str]] = None,
+    genes: Optional[list[str]] = None,
     layer: Optional[str] = None,
     height: int = 600,
     mode: str = "3D",
@@ -132,22 +132,22 @@ def vis(
 
     validate_mode(mode)
     validate_height(height)
-    validate_adata_key(adata, position_key, "obsm")
-    validate_adata_key(adata, color_key, "obs")
+    validate_adata_key(adata, position, "obsm")
+    validate_adata_key(adata, color, "obs")
 
-    if slice_key is not None:
-        validate_adata_key(adata, slice_key, "obs")
+    if slice is not None:
+        validate_adata_key(adata, slice, "obs")
 
     if annotations:
         for anno in annotations:
             validate_adata_key(adata, anno, "obs")
 
-    if continuous_obs:
-        for key in continuous_obs:
+    if continuous:
+        for key in continuous:
             validate_adata_key(adata, key, "obs")
 
-    if gene_list:
-        for gene in gene_list:
+    if genes:
+        for gene in genes:
             validate_adata_key(adata, gene, "var")
     # Use context manager to temporarily set log level if requested
     # This ensures the original level is restored after the function completes
@@ -159,13 +159,13 @@ def vis(
         start_total = _now()
         logger.info(
             "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
-            position_key,
-            color_key,
+            position,
+            color,
             len(annotations) if annotations else 0,
-            len(continuous_obs) if continuous_obs else 0,
-            len(gene_list) if gene_list else 0,
+            len(continuous) if continuous else 0,
+            len(genes) if genes else 0,
             mode,
-            slice_key if mode == "3D" else "(ignored in 2D mode)",
+            slice if mode == "3D" else "(ignored in 2D mode)",
         )
 
     w = SpatialVistaWidget()
@@ -180,7 +180,7 @@ def vis(
             "Height": int(height),
             "Mode": mode,
             # if mode is "2D", slice_key is not relevant; frontend can check Mode
-            "SliceKey": slice_key if mode == "3D" else None,
+            "SliceKey": slice if mode == "3D" else None,
         }
     }
     futures.append(
@@ -192,7 +192,7 @@ def vis(
 
     # --- LAZ ---
     t0 = _now()
-    laz_bytes = write_laz_to_bytes(adata, position_key, mode=mode)
+    laz_bytes = write_laz_to_bytes(adata, position, mode=mode)
     t_laz = _now() - t0
     logger.info(
         "vis: write_laz_to_bytes produced {} bytes in {:.3f}s",
@@ -212,8 +212,8 @@ def vis(
     t0 = _now()
     anno_config, anno_bins = export_annotations_blob(
         adata,
-        color_key,
-        slice_key,
+        color,
+        slice,
         annotations,
     )
     t_ann = _now() - t0
@@ -247,11 +247,11 @@ def vis(
     cont_traits = {}
     cont_bins = {}
     cont_obs_bytes = 0
-    if continuous_obs:
+    if continuous:
         t0 = _now()
         cont_traits, cont_bins = export_continuous_obs_blob(
             adata,
-            continuous_obs,
+            continuous,
         )
         t_cont = _now() - t0
         cont_obs_bytes = (
@@ -282,10 +282,10 @@ def vis(
 
     # --- continuous genes ---
     gene_bytes = 0
-    if gene_list:
+    if genes:
         t0 = _now()
         gene_traits, gene_bins = export_continuous_gene_blob(
-            adata, gene_list, layer=layer
+            adata, genes, layer=layer
         )
         t_genes = _now() - t0
         cont_traits.update(gene_traits)
@@ -293,7 +293,7 @@ def vis(
         gene_bytes = sum(len(b) for b in gene_bins.values()) if gene_bins else 0
         logger.info(
             "vis: export_continuous_gene_blob produced {} genes total_bytes={} in {:.3f}s",
-            len(gene_list),
+            len(genes),
             gene_bytes,
             t_genes,
         )
