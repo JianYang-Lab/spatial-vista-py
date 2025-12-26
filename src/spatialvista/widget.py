@@ -4,7 +4,8 @@ from pathlib import Path
 
 import anywidget
 import traitlets
-from loguru import logger
+
+from ._logger import logger
 
 # Measure time to load the ESM JS file at import time
 _WIDGET_PATH = Path(__file__).parent / "_widget" / "spatialvista_widget.mjs"

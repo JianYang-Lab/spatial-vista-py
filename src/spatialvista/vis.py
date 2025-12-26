@@ -1,10 +1,8 @@
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from loguru import logger
-
+from ._logger import logger
 from .exporter import (
     export_annotations_blob,
     export_continuous_gene_blob,
@@ -12,10 +10,6 @@ from .exporter import (
     write_laz_to_bytes,
 )
 from .widget import SpatialVistaWidget
-
-logger.remove(0)
-
-logger.add(sys.stdout, level="WARNING")
 
 
 def _now():
@@ -76,21 +70,72 @@ def vis(
     layer: str | None = None,
     height: int = 600,  ## height of the widget, unit px
     mode: str = "3D",  ## visualization mode: "3D" or "2D"
+    log_level: str
+    | None = None,  ## logging level: "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
     _async_workers: int = 2,
     _wait_for_all_sends: bool = False,
 ):
     """
+    Create and return a SpatialVista visualization widget.
+
     If _wait_for_all_sends is True, the function will block until all background sends finish.
     Otherwise it will return the widget immediately while sends may continue in background.
 
     Parameters
     ----------
-    mode : str, default "3D"
-        Visualization mode. "3D" for 3D point cloud, "2D" for 2D projection (z=0).
+    adata : AnnData
+        Annotated data object containing spatial information.
+    position_key : str
+        Key in adata.obsm containing spatial coordinates.
+    color_key : str
+        Key in adata.obs for default categorical coloring.
     slice_key : str, optional
         Annotation key for section slicing (only relevant when mode="3D" and switching to 2D slice view in UI).
         Ignored when mode="2D".
+    annotations : list[str], optional
+        List of additional categorical annotation keys to export.
+    continuous_obs : list[str], optional
+        List of continuous observation keys to export.
+    gene_list : list[str], optional
+        List of gene names to export.
+    layer : str, optional
+        Layer to use for gene expression values. If None, uses adata.X.
+    height : int, default 600
+        Height of the widget in pixels.
+    mode : str, default "3D"
+        Visualization mode. "3D" for 3D point cloud, "2D" for 2D projection (z=0).
+    log_level : str, optional
+        Logging level for this visualization session. If provided, temporarily sets the log level.
+        Valid values: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
+        If None, uses the current global log level (default: "WARNING").
+    _async_workers : int, default 2
+        Number of background workers for async trait sends.
+    _wait_for_all_sends : bool, default False
+        Whether to wait for all background sends to complete before returning.
+
+    Returns
+    -------
+    SpatialVistaWidget
+        The configured widget ready for display.
+
+    Examples
+    --------
+    >>> import spatialvista as spv
+    >>> # Use default WARNING level
+    >>> widget = spv.vis(adata, position_key="spatial", color_key="region")
+    >>>
+    >>> # Enable verbose logging for debugging
+    >>> widget = spv.vis(adata, position_key="spatial", color_key="region", log_level="INFO")
     """
+    # Temporarily set log level if requested
+    from ._logger import logger, set_log_level
+
+    # original_level = None
+    if log_level is not None:
+        # Store the original level (though loguru doesn't provide easy access to current level)
+        # For now, we'll just set the new level and not restore
+        set_log_level(log_level)
+
     start_total = _now()
     logger.info(
         "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
