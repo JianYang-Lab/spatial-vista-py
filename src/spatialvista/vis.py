@@ -1,8 +1,9 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
+from contextlib import nullcontext as _nullcontext
+from typing import Any, Optional
 
-from ._logger import logger
+from ._logger import logger, temp_log_level
 from .exporter import (
     export_annotations_blob,
     export_continuous_gene_blob,
@@ -12,11 +13,12 @@ from .exporter import (
 from .widget import SpatialVistaWidget
 
 
-def _now():
+def _now() -> float:
     return time.perf_counter()
 
 
 def _size_of_value(v: Any) -> int:
+    """Calculate approximate size of a value in bytes."""
     if v is None:
         return 0
     if isinstance(v, (bytes, bytearray, memoryview)):
@@ -35,7 +37,7 @@ def _size_of_value(v: Any) -> int:
 
 def _async_set_trait_and_send(
     widget: SpatialVistaWidget, trait_name: str, value: Any
-):
+) -> None:
     """
     Background worker: set trait and call send_state for that trait.
     This function deliberately swallows exceptions and logs them, to avoid crashing the worker.
@@ -62,19 +64,17 @@ def vis(
     adata,
     position_key: str,
     color_key: str,
-    slice_key: str
-    | None = None,  ## slice key for section-based 2D view (only used when mode="3D")
-    annotations: list[str] | None = None,
-    continuous_obs: list[str] | None = None,
-    gene_list: list[str] | None = None,
-    layer: str | None = None,
-    height: int = 600,  ## height of the widget, unit px
-    mode: str = "3D",  ## visualization mode: "3D" or "2D"
-    log_level: str
-    | None = None,  ## logging level: "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    slice_key: Optional[str] = None,
+    annotations: Optional[list[str]] = None,
+    continuous_obs: Optional[list[str]] = None,
+    gene_list: Optional[list[str]] = None,
+    layer: Optional[str] = None,
+    height: int = 600,
+    mode: str = "3D",
+    log_level: Optional[str] = None,
     _async_workers: int = 2,
     _wait_for_all_sends: bool = False,
-):
+) -> SpatialVistaWidget:
     """
     Create and return a SpatialVista visualization widget.
 
@@ -127,26 +127,46 @@ def vis(
     >>> # Enable verbose logging for debugging
     >>> widget = spv.vis(adata, position_key="spatial", color_key="region", log_level="INFO")
     """
-    # Temporarily set log level if requested
-    from ._logger import logger, set_log_level
 
-    # original_level = None
-    if log_level is not None:
-        # Store the original level (though loguru doesn't provide easy access to current level)
-        # For now, we'll just set the new level and not restore
-        set_log_level(log_level)
+    from .validation import validate_adata_key, validate_height, validate_mode
 
-    start_total = _now()
-    logger.info(
-        "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
-        position_key,
-        color_key,
-        len(annotations) if annotations else 0,
-        len(continuous_obs) if continuous_obs else 0,
-        len(gene_list) if gene_list else 0,
-        mode,
-        slice_key if mode == "3D" else "(ignored in 2D mode)",
+    validate_mode(mode)
+    validate_height(height)
+    validate_adata_key(adata, position_key, "obsm")
+    validate_adata_key(adata, color_key, "obs")
+
+    if slice_key is not None:
+        validate_adata_key(adata, slice_key, "obs")
+
+    if annotations:
+        for anno in annotations:
+            validate_adata_key(adata, anno, "obs")
+
+    if continuous_obs:
+        for key in continuous_obs:
+            validate_adata_key(adata, key, "obs")
+
+    if gene_list:
+        for gene in gene_list:
+            validate_adata_key(adata, gene, "var")
+    # Use context manager to temporarily set log level if requested
+    # This ensures the original level is restored after the function completes
+    context = (
+        temp_log_level(log_level) if log_level is not None else _nullcontext()
     )
+
+    with context:
+        start_total = _now()
+        logger.info(
+            "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
+            position_key,
+            color_key,
+            len(annotations) if annotations else 0,
+            len(continuous_obs) if continuous_obs else 0,
+            len(gene_list) if gene_list else 0,
+            mode,
+            slice_key if mode == "3D" else "(ignored in 2D mode)",
+        )
 
     w = SpatialVistaWidget()
 

@@ -46,33 +46,46 @@ def name_to_rgb(name: str) -> tuple[int, int, int]:
 
 
 def write_laz(adata, position_key, path, mode: str = "3D"):
+    """
+    Write point cloud data to LAZ format.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object.
+    position_key : str
+        Key in adata.obsm containing spatial coordinates.
+    path : str or Path or BytesIO
+        Output path or buffer.
+    mode : str, default "3D"
+        Visualization mode: "3D" or "2D".
+    """
     start = _now()
-    # add header for LAS file
     header = laspy.LasHeader(point_format=3, version="1.2")
-    # xyz in df['position'], (N,3)
     coords = np.asanyarray(adata.obsm[position_key])
 
-    ## check if coords has 3 dimensions, if not bu in 2D mode, add z
-    if (coords.shape[1] != 3) & (mode == "2D"):
-        print(f"Adding z dimension{coords.shape[1]},mode{mode}")
+    # Handle 2D coordinates: add z dimension if needed
+    if coords.shape[1] == 2:
+        logger.debug(
+            f"Adding z dimension for 2D coordinates (shape={coords.shape})"
+        )
         coords = np.hstack(
             (coords, np.zeros((coords.shape[0], 1), dtype=np.float64))
+        )
+    elif coords.shape[1] != 3:
+        raise ValueError(
+            f"Expected 2 or 3 spatial dimensions, got {coords.shape[1]}"
         )
 
     x = coords[:, 0].astype(np.float64)
     y = coords[:, 1].astype(np.float64)
     z = coords[:, 2].astype(np.float64)
-    if (coords.shape[1] == 3) & (mode == "2D"):
+
+    # In 2D mode, flatten z coordinate
+    if mode == "2D":
         z = np.zeros_like(x, dtype=np.float64)
 
-    # If mode is "2D", set z to 0; otherwise use original z
-    # if mode == "2D":
-    #     z = np.zeros_like(x, dtype=np.float64)
-    # else:
-    #     z = coords[:, 2].astype(np.float64)
-
-    # header.offsets = [x.min(), y.min(), z.min()]
-
+    # Calculate scale and offset for quantization
     mins = coords.min(axis=0)
     maxs = coords.max(axis=0)
     span = maxs - mins
@@ -80,37 +93,28 @@ def write_laz(adata, position_key, path, mode: str = "3D"):
     target_int_range = 1e7
     scales = span / target_int_range
     scales = np.maximum(scales, 1e-3)
-    # ## if 2D and sacles is 2-shape, add z scale
-    # if mode == "2D" and scales.shape == (2,):
-    #     scales = np.append(scales, 1)
-    # ## if 2D and mins
-    # if mode == "2D" and mins.shape == (2,):
-    #     mins = np.append(mins, 0)
 
+    # For 2D mode, use fixed scale for z
     if mode == "2D":
-        ## change third scale to 1
-        scales[2] = 1
-        mins[2] = 0
-    print(scales)
+        scales[2] = 1.0
+        mins[2] = 0.0
+
+    logger.debug(f"LAZ scales: {scales}, offsets: {mins}")
+
     header.offsets = mins.tolist()
     header.scales = scales.tolist()
 
-    # header.scales = [0.001, 0.001, 0.001]
-    # header.add_extra_dim(laspy.ExtraBytesParams(name="random", type=np.int32))
-    # construct las file
     las = laspy.LasData(header)
-
     las.x = x
     las.y = y
     las.z = z
 
-    # 5. write
     las.write(path)
 
     duration = _now() - start
     n_points = coords.shape[0]
     logger.info(
-        "write_laz: wrote {} points to {} in {:.3f} (mode={})",
+        "write_laz: wrote {} points to {} in {:.3f}s (mode={})",
         n_points,
         path,
         duration,
