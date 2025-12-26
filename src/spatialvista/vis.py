@@ -64,7 +64,7 @@ def vis(
     adata,
     position: str,
     color: str,
-    slice: Optional[str] = None,
+    section: Optional[str] = None,
     annotations: Optional[list[str]] = None,
     continuous: Optional[list[str]] = None,
     genes: Optional[list[str]] = None,
@@ -85,18 +85,18 @@ def vis(
     ----------
     adata : AnnData
         Annotated data object containing spatial information.
-    position_key : str
+    position : str
         Key in adata.obsm containing spatial coordinates.
-    color_key : str
+    color : str
         Key in adata.obs for default categorical coloring.
-    slice_key : str, optional
+    section : str, optional
         Annotation key for section slicing (only relevant when mode="3D" and switching to 2D slice view in UI).
         Ignored when mode="2D".
     annotations : list[str], optional
         List of additional categorical annotation keys to export.
-    continuous_obs : list[str], optional
+    continuous : list[str], optional
         List of continuous observation keys to export.
-    gene_list : list[str], optional
+    genes : list[str], optional
         List of gene names to export.
     layer : str, optional
         Layer to use for gene expression values. If None, uses adata.X.
@@ -135,8 +135,8 @@ def vis(
     validate_adata_key(adata, position, "obsm")
     validate_adata_key(adata, color, "obs")
 
-    if slice is not None:
-        validate_adata_key(adata, slice, "obs")
+    if section is not None:
+        validate_adata_key(adata, section, "obs")
 
     if annotations:
         for anno in annotations:
@@ -165,7 +165,7 @@ def vis(
             len(continuous) if continuous else 0,
             len(genes) if genes else 0,
             mode,
-            slice if mode == "3D" else "(ignored in 2D mode)",
+            section if mode == "3D" else "(ignored in 2D mode)",
         )
 
     w = SpatialVistaWidget()
@@ -180,7 +180,7 @@ def vis(
             "Height": int(height),
             "Mode": mode,
             # if mode is "2D", slice_key is not relevant; frontend can check Mode
-            "SliceKey": slice if mode == "3D" else None,
+            "SliceKey": section if mode == "3D" else None,
         }
     }
     futures.append(
@@ -213,7 +213,7 @@ def vis(
     anno_config, anno_bins = export_annotations_blob(
         adata,
         color,
-        slice,
+        section,
         annotations,
     )
     t_ann = _now() - t0
