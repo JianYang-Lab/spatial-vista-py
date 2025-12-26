@@ -78,12 +78,16 @@ export default function Vis({
   useEffect(() => {
     if (mode === "2D") {
       viewStates.setLayoutMode("2d");
+      // For 2D mode from backend, we don't automatically show scatterplot
+      // User needs to have section data and manually toggle
     } else {
       // mode === "3D": default behavior (point cloud)
       uiStates.setshowPointCloud(true);
       uiStates.setShowScatterplot(false);
     }
-  }, [mode, uiStates, viewStates]);
+    // Only depend on mode, not uiStates or viewStates to avoid re-running
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
   // laz URL State
   const [lazUrl, setLazUrl] = useState<string | null>(null);
 
@@ -368,7 +372,7 @@ export default function Vis({
     if (uiStates.showPointCloud) {
       // turn off DeckGL
       uiStates.setshowPointCloud(false);
-      const sectionAnnotations = loadedData?.extData.annotations["section"];
+      const sectionAnnotations = loadedData?.extData.annotations[slicekey];
       // get available section IDs
       if (sectionStates.availableSectionIDs.length === 0) {
         const uniqueSectionIDs = Array.from(new Set(sectionAnnotations)).sort(
@@ -409,6 +413,7 @@ export default function Vis({
   }, [
     uiStates,
     loadedData,
+    slicekey,
     sectionStates,
     containerWidth,
     viewStates,
