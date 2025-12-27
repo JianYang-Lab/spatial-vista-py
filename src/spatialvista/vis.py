@@ -1,9 +1,8 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from contextlib import nullcontext as _nullcontext
 from typing import Any, Optional
 
-from ._logger import logger, temp_log_level
+from ._logger import logger
 from .exporter import (
     export_annotations_blob,
     export_continuous_gene_blob,
@@ -71,7 +70,6 @@ def vis(
     layer: Optional[str] = None,
     height: int = 600,
     mode: str = "3D",
-    log_level: Optional[str] = None,
     _async_workers: int = 2,
     _wait_for_all_sends: bool = False,
 ) -> SpatialVistaWidget:
@@ -104,10 +102,6 @@ def vis(
         Height of the widget in pixels.
     mode : str, default "3D"
         Visualization mode. "3D" for 3D point cloud, "2D" for 2D projection (z=0).
-    log_level : str, optional
-        Logging level for this visualization session. If provided, temporarily sets the log level.
-        Valid values: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
-        If None, uses the current global log level (default: "WARNING").
     _async_workers : int, default 2
         Number of background workers for async trait sends.
     _wait_for_all_sends : bool, default False
@@ -121,11 +115,13 @@ def vis(
     Examples
     --------
     >>> import spatialvista as spv
+    >>>
     >>> # Use default WARNING level
     >>> widget = spv.vis(adata, position_key="spatial", color_key="region")
     >>>
-    >>> # Enable verbose logging for debugging
-    >>> widget = spv.vis(adata, position_key="spatial", color_key="region", log_level="INFO")
+    >>> # Enable verbose logging
+    >>> spv.set_log_level("INFO")
+    >>> widget = spv.vis(adata, position_key="spatial", color_key="region")
     """
 
     from .validation import validate_adata_key, validate_height, validate_mode
@@ -149,24 +145,18 @@ def vis(
     if genes:
         for gene in genes:
             validate_adata_key(adata, gene, "var")
-    # Use context manager to temporarily set log level if requested
-    # This ensures the original level is restored after the function completes
-    context = (
-        temp_log_level(log_level) if log_level is not None else _nullcontext()
-    )
 
-    with context:
-        start_total = _now()
-        logger.info(
-            "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
-            position,
-            color,
-            len(annotations) if annotations else 0,
-            len(continuous) if continuous else 0,
-            len(genes) if genes else 0,
-            mode,
-            section if mode == "3D" else "(ignored in 2D mode)",
-        )
+    start_total = _now()
+    logger.info(
+        "vis: starting export position_key={} region_key={} n_annotations={} n_continuous_obs={} n_genes={} mode={} slice_key={}",
+        position,
+        color,
+        len(annotations) if annotations else 0,
+        len(continuous) if continuous else 0,
+        len(genes) if genes else 0,
+        mode,
+        section if mode == "3D" else "(ignored in 2D mode)",
+    )
 
     w = SpatialVistaWidget()
 

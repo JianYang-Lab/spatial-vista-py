@@ -168,7 +168,6 @@ __all__ = [
     "set_log_level",
     "get_log_level",
     "get_logger",
-    "temp_log_level",
     "disable_logging",
     "enable_logging",
 ]
