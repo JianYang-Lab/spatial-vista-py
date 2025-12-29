@@ -116,12 +116,12 @@ def vis(
     --------
     >>> import spatialvista as spv
     >>>
-    >>> # Use default WARNING level
-    >>> widget = spv.vis(adata, position_key="spatial", color_key="region")
+    >>> # Basic usage
+    >>> widget = spv.vis(adata, position="spatial", color="region")
     >>>
-    >>> # Enable verbose logging
+    >>> # With logging enabled
     >>> spv.set_log_level("INFO")
-    >>> widget = spv.vis(adata, position_key="spatial", color_key="region")
+    >>> widget = spv.vis(adata, position="spatial", color="region")
     """
 
     from .validation import validate_adata_key, validate_height, validate_mode
