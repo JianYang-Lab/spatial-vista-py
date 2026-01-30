@@ -20,9 +20,20 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+spatialvista = [
+  "_widget/*.mjs",
+]
+
 [project.optional-dependencies]
 docs = [
   "mkdocs",
   "mkdocs-material",
   "mkdocstrings[python]",
 ]
+
+[project.urls]
+Homepage = "https://github.com/JianYang-Lab/spatial-vista-py"
+Documentation = "https://github.com/JianYang-Lab/spatial-vista-py"
+Repository = "https://github.com/JianYang-Lab/spatial-vista-py"
+Issues = "https://github.com/JianYang-Lab/spatial-vista-py/issues"

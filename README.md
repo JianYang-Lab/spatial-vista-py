@@ -11,7 +11,7 @@
 
 **SpatialVista** is an **interactive 3D spatial transcriptomics visualization tool** designed specifically for Jupyter Notebook/Lab. It seamlessly integrates into your data analysis workflow, providing efficient and intuitive exploration of spatial omics data.
 
-![SpatialVista](docs/images/screen.jpeg)
+![SpatialVista](https://raw.githubusercontent.com/JianYang-Lab/spatial-vista-py/main/docs/images/screen.jpeg)
 
 
 ### ✨ Key Features
@@ -45,23 +45,37 @@ pip install spatialvista
 
 #### Basic Usage
 
+Launch your jupyter notebook or jupyter lab. And play with SpatialVista!
+
 ```python
 import spatialvista as spv
-import scanpy as sc
+import numpy as np
 
-# Load spatial transcriptomics data
+# Create minimal test data
+class FakeAnnData:
+    def __init__(self, n: int):
+        self.obsm = {"spatial": np.random.rand(n, 3)}
+        self.obs = {"celltype": np.random.choice(["A", "B", "C"], n)}
+        self.var_names = []
+        self.X = None
+        self.n_obs = n
+adata = FakeAnnData(n=10_000)
+
+# Create visualization
+spv.vis(adata, position="spatial", color="celltype")
+
+
+import scanpy as sc
+# Load yout real data
 adata = sc.read_h5ad("spatial_data.h5ad")
 
 # Create interactive visualization
-widget = spv.vis(
+spv.vis(
     adata,
     position="spatial",  # obsm key containing spatial coordinates
     color="celltype",    # Default annotation for coloring
     height=600               # Widget height in pixels
 )
-
-# Display widget
-widget
 ```
 
 That's it! 🎉
