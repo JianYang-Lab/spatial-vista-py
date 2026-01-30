@@ -1,7 +1,7 @@
 [project]
 name = "spatialvista"
 version = "0.1.0"
-description = "Add your description here"
+description = "3D ST Visualization in Jupyter"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
