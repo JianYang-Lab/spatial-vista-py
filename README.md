@@ -47,6 +47,10 @@ pip install spatialvista
 
 Launch your jupyter notebook or jupyter lab. And play with SpatialVista!
 
+```bash
+jupyter-lab
+```
+
 ```python
 import spatialvista as spv
 import numpy as np
