@@ -154,7 +154,7 @@ Once displayed, the widget provides rich interactive controls for exploring your
 Issues and Pull Requests are welcome!
 
 - **GitHub**: [https://github.com/JianYang-Lab/spatial-vista-py](https://github.com/JianYang-Lab/spatial-vista-py)
-- **Documentation**: [https://spatial-vista-py.readthedocs.io](https://spatial-vista-py.readthedocs.io)
+- **Documentation**: [https://jianyang-lab.github.io/spatial-vista-py/](https://jianyang-lab.github.io/spatial-vista-py/)
 
 ### 📄 License
 
