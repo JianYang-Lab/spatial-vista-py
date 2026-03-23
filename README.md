@@ -14,7 +14,18 @@
 ![SpatialVista](https://raw.githubusercontent.com/JianYang-Lab/spatial-vista-py/main/docs/images/screen.jpeg)
 
 
-### ✨ Key Features
+## 🌐 Web and App Access
+
+In addition to the Jupyter-based interface, SpatialVista is also available as:
+
+- **Web version**: [https://yanglab.westlake.edu.cn/spatialvista/vis](https://yanglab.westlake.edu.cn/spatialvista/vis)
+- **Desktop Apps**: [https://yanglab.westlake.edu.cn/spatialvista/download](https://yanglab.westlake.edu.cn/spatialvista/download)
+
+These options allow users to explore 3D spatial transcriptomics data without setting up a Python environment.
+
+Note that the web/app versions support the same core visualization functionalities, while the Jupyter version enables seamless integration with analysis workflows.
+
+## ✨ Key Features
 
 - 🚀 **High-Performance Rendering** - WebGL-based 3D rendering supporting millions of cells
 - 📊 **Multi-Dimensional Data Display** - Support for categorical annotations, continuous values, gene expression, and more
@@ -25,7 +36,7 @@
 - 🎯 **Precise Filtering** - Filter data points by category, numerical range, and other conditions
 - 💾 **One-Click Screenshots** - Easily save current views for publications and reports
 
-### 🎯 Use Cases
+## 🎯 Use Cases
 
 SpatialVista is particularly suitable for:
 
@@ -35,7 +46,16 @@ SpatialVista is particularly suitable for:
 - **Gene Expression Pattern Analysis** - View spatial expression of specific genes
 - **Data Quality Control** - Quickly check data integrity and outliers
 
-### 🚀 Quick Start
+## 🚀 Quick Start
+
+#### Dependencies:
+
+- Python >= 3.10
+- Tested on:
+  - macOS 12.0+ (Intel/Apple Silicon)
+  - Linux (Ubuntu 18.04+)
+  - Windows (windows10/11)
+- Recommended browsers: Chrome or other Chromium-based browsers (with WebGL support).
 
 #### Installation
 
@@ -83,6 +103,11 @@ spv.vis(
 ```
 
 That's it! 🎉
+
+#### More demo data for test
+
+1. Cubic mock data: https://yanglab.westlake.edu.cn/gsmap3d/data/cube.h5ad
+2. Mouse Brain data: https://yanglab.westlake.edu.cn/gsmap3d/data/mouse_brain_3_IQ.h5ad
 
 ### 📚 Core Features
 
@@ -163,5 +188,5 @@ SpatialVista is open-sourced under the MIT License.
 ---
 
 <div align="center">
-  <p>Built with ❤️ by WenjieWei@YangLab</p>
+  <p>Built by WenjieWei@YangLab</p>
 </div>
