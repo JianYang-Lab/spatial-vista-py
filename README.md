@@ -11,7 +11,7 @@
 
 **SpatialVista** is an **interactive 3D spatial transcriptomics visualization tool** designed specifically for Jupyter Notebook/Lab. It seamlessly integrates into your data analysis workflow, providing efficient and intuitive exploration of spatial omics data.
 
-![SpatialVista](https://raw.githubusercontent.com/JianYang-Lab/spatial-vista-py/main/docs/images/screen.jpeg)
+![SpatialVista](https://raw.githubusercontent.com/JianYang-Lab/spatial-vista-py/main/Figure_1.png)
 
 
 ## 🌐 Web and App Access
