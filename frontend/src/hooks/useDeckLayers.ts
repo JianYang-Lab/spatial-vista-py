@@ -26,6 +26,8 @@ interface UseDeckLayersProps {
   FancyPositions: Float32Array | null;
   colorParams: ColorCalculatorParams;
   lazUrl: string | null;
+  selectedPointIndices: Set<number>;
+  selectionVersion: number;
 }
 
 export const useDeckLayers = ({
@@ -42,6 +44,8 @@ export const useDeckLayers = ({
   FancyPositions,
   colorParams,
   lazUrl,
+  selectedPointIndices,
+  selectionVersion,
 }: UseDeckLayersProps): LayersList => {
   return useMemo(() => {
     // Prefer using parsed loadedData over lazUrl so the layer uses the already-parsed object
@@ -53,6 +57,10 @@ export const useDeckLayers = ({
     const dataSource = loadedData ?? lazUrl;
 
     const shouldUseOnDataLoad = typeof dataSource === "string" && !!onDataLoad;
+    const layerColorParams = {
+      ...colorParams,
+      selectedPointIndices,
+    };
 
     const layersList: LayersList = [];
 
@@ -81,6 +89,7 @@ export const useDeckLayers = ({
               colorParams.customColors,
               colorParams.coloringAnnotation,
               colorParams.selectedCategories,
+              selectionVersion,
             ],
             getPosition: [layoutMode, FancyPositions],
           },
@@ -88,7 +97,7 @@ export const useDeckLayers = ({
           getColor: (_d, { index, data }) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const extData = (data as any).extData;
-            return calculatePointColor(index, extData, colorParams);
+            return calculatePointColor(index, extData, layerColorParams);
           },
 
           getPosition: (_d, { index, data }) => {
@@ -169,7 +178,7 @@ export const useDeckLayers = ({
           getFillColor: (i: number): ColorRGBA => {
             if (!loadedData?.extData) return [0, 0, 0, 0];
             const extData = loadedData.extData;
-            return calculatePointColor(i, extData, colorParams);
+            return calculatePointColor(i, extData, layerColorParams);
           },
 
           updateTriggers: {
@@ -180,6 +189,7 @@ export const useDeckLayers = ({
               colorParams.customColors,
               colorParams.coloringAnnotation,
               colorParams.selectedCategories,
+              selectionVersion,
             ],
             // ensure radius updates when pointSize changes
             getRadius: [pointSize],
@@ -203,5 +213,7 @@ export const useDeckLayers = ({
     FancyPositions,
     colorParams,
     lazUrl,
+    selectedPointIndices,
+    selectionVersion,
   ]);
 };

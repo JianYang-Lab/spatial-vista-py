@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useEffect, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { OrbitView, OrthographicView } from "@deck.gl/core";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,11 @@ import {
   type LayoutMode,
   type LoadedData,
 } from "@/types";
+import type { ColorCalculatorParams } from "@/utils/colorCalculator";
+import {
+  getLassoSelectedIndices,
+  type ScreenPoint,
+} from "@/utils/lassoSelection";
 
 interface VisualizationAreaProps {
   // Basic states
@@ -43,6 +48,9 @@ interface VisualizationAreaProps {
   // LogP controls props
   NumericThreshold: number;
   minMaxValue: [number, number] | null;
+  lassoEnabled: boolean;
+  selectedCount: number;
+  colorParams: ColorCalculatorParams;
 
   // Device
   device?: Device;
@@ -54,6 +62,7 @@ interface VisualizationAreaProps {
   onSectionClick: (sectionID: number) => void;
   onNumericThresholdChange: (threshold: number) => void;
   onAfterRender: ({ gl }: { gl: WebGLRenderingContext }) => void;
+  onLassoSelect: (indices: number[]) => void;
 
   annotationConfig: AnnotationConfig | null;
 }
@@ -74,6 +83,9 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   sectionPreviews,
   NumericThreshold,
   minMaxValue,
+  lassoEnabled,
+  selectedCount,
+  colorParams,
   device,
   onViewStateUpdate,
   onStViewStateUpdate,
@@ -81,10 +93,129 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   onSectionClick,
   onNumericThresholdChange,
   onAfterRender,
+  onLassoSelect,
   annotationConfig,
 }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deckRef = useRef<any>(null);
+  const lassoPointsRef = useRef<ScreenPoint[]>([]);
+  const pointerIdRef = useRef<number | null>(null);
+  const [lassoPoints, setLassoPoints] = useState<ScreenPoint[]>([]);
+  const [isLassoDrawing, setIsLassoDrawing] = useState(false);
+
+  const updateLassoPoints = useCallback((points: ScreenPoint[]) => {
+    lassoPointsRef.current = points;
+    setLassoPoints(points);
+  }, []);
+
+  const resetLassoStroke = useCallback(() => {
+    lassoPointsRef.current = [];
+    setLassoPoints([]);
+    pointerIdRef.current = null;
+    setIsLassoDrawing(false);
+  }, []);
+
+  const getLocalPoint = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    },
+    [],
+  );
+
+  const finishLassoSelection = useCallback(() => {
+    const polygon = lassoPointsRef.current;
+
+    if (polygon.length >= 3 && loadedData?.extData) {
+      const viewport = deckRef.current?.deck?.getViewports?.()[0];
+
+      if (viewport) {
+        const selected = getLassoSelectedIndices({
+          polygon,
+          viewport,
+          extData: loadedData.extData,
+          colorParams,
+        });
+        onLassoSelect(selected);
+      }
+    }
+
+    resetLassoStroke();
+  }, [colorParams, loadedData, onLassoSelect, resetLassoStroke]);
+
+  const handleLassoPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!lassoEnabled || !loadedData) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.focus();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      pointerIdRef.current = event.pointerId;
+      setIsLassoDrawing(true);
+      updateLassoPoints([getLocalPoint(event)]);
+    },
+    [getLocalPoint, lassoEnabled, loadedData, updateLassoPoints],
+  );
+
+  const handleLassoPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!isLassoDrawing || pointerIdRef.current !== event.pointerId) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const nextPoint = getLocalPoint(event);
+      const currentPoints = lassoPointsRef.current;
+      const lastPoint = currentPoints[currentPoints.length - 1];
+
+      if (
+        lastPoint &&
+        Math.hypot(nextPoint.x - lastPoint.x, nextPoint.y - lastPoint.y) < 2
+      ) {
+        return;
+      }
+
+      updateLassoPoints([...currentPoints, nextPoint]);
+    },
+    [getLocalPoint, isLassoDrawing, updateLassoPoints],
+  );
+
+  const handleLassoPointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!isLassoDrawing || pointerIdRef.current !== event.pointerId) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      finishLassoSelection();
+    },
+    [finishLassoSelection, isLassoDrawing],
+  );
+
+  const handleLassoKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        resetLassoStroke();
+      }
+    },
+    [resetLassoStroke],
+  );
+
+  useEffect(() => {
+    if (!lassoEnabled) {
+      resetLassoStroke();
+    }
+  }, [lassoEnabled, resetLassoStroke]);
 
   const handleViewStateChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,11 +343,13 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
             ? new OrbitView({
                 orbitAxis: "Y",
                 fovy: 50,
-                controller: {
-                  inertia: true,
-                  scrollZoom: true,
-                  dragMode: layoutMode === "3d" ? "rotate" : "pan",
-                },
+                controller: lassoEnabled
+                  ? false
+                  : {
+                      inertia: true,
+                      scrollZoom: true,
+                      dragMode: layoutMode === "3d" ? "rotate" : "pan",
+                    },
               })
             : new OrthographicView({
                 controller: {
@@ -231,6 +364,46 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         layers={layers}
         getTooltip={getTooltip}
       />
+
+      {lassoEnabled && (
+        <div
+          className="absolute inset-0 z-30 cursor-crosshair touch-none"
+          onPointerDown={handleLassoPointerDown}
+          onPointerMove={handleLassoPointerMove}
+          onPointerUp={handleLassoPointerUp}
+          onPointerCancel={resetLassoStroke}
+          onKeyDown={handleLassoKeyDown}
+          onWheel={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          role="presentation"
+          tabIndex={0}
+        >
+          <svg className="absolute inset-0 h-full w-full pointer-events-none">
+            {lassoPoints.length > 2 && (
+              <polygon
+                points={lassoPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="rgba(255, 214, 64, 0.16)"
+                stroke="rgba(255, 214, 64, 0.85)"
+                strokeWidth={1.5}
+              />
+            )}
+            {lassoPoints.length > 1 && (
+              <polyline
+                points={lassoPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="rgba(255, 214, 64, 0.95)"
+                strokeDasharray="4 3"
+                strokeWidth={1.5}
+              />
+            )}
+          </svg>
+          <div className="absolute top-3 left-3 rounded-md border bg-background/85 px-2 py-1 text-xs shadow-sm pointer-events-none">
+            Selected: {selectedCount}
+          </div>
+        </div>
+      )}
 
       {/* 2D Section Carousel */}
       {!showPointCloud && showScatterplot && (

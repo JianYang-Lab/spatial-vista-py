@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { Device } from "@luma.gl/core";
 
 // Hooks
@@ -26,6 +26,32 @@ import type {
   ContinuousConfig,
   ContinuousField,
 } from "@/types";
+
+const normalizeSelectionIndices = (selection: unknown) => {
+  const raw =
+    typeof selection === "object" && selection !== null
+      ? ((selection as { indices?: unknown; orders?: unknown }).indices ??
+        (selection as { indices?: unknown; orders?: unknown }).orders)
+      : [];
+
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const seen = new Set<number>();
+  const indices: number[] = [];
+
+  for (const value of raw) {
+    const index = Number(value);
+
+    if (Number.isInteger(index) && index >= 0 && !seen.has(index)) {
+      seen.add(index);
+      indices.push(index);
+    }
+  }
+
+  return indices;
+};
 
 export default function Vis({
   onLoad,
@@ -104,6 +130,51 @@ export default function Vis({
   >({});
 
   const [activeContinuous, setActiveContinuous] = useState<string | null>(null);
+  const [lassoEnabled, setLassoEnabled] = useState(false);
+  const [selectedCellIndices, setSelectedCellIndices] = useState<number[]>([]);
+  const [selectionVersion, setSelectionVersion] = useState(0);
+
+  const selectedPointIndices = useMemo(
+    () => new Set(selectedCellIndices),
+    [selectedCellIndices],
+  );
+
+  const writeSelectedCellsToModel = useCallback(
+    (indices: number[], source: "lasso" | "clear") => {
+      const normalized = normalizeSelectionIndices({ indices });
+
+      setSelectedCellIndices(normalized);
+      setSelectionVersion((version) => version + 1);
+
+      model.set("selected_cells", {
+        indices: normalized,
+        orders: normalized,
+        count: normalized.length,
+        source,
+        mode: uiStates.showPointCloud ? "3D" : "2D",
+        timestamp: Date.now(),
+      });
+      model.save_changes?.();
+    },
+    [model, uiStates.showPointCloud],
+  );
+
+  useEffect(() => {
+    if (!model) return;
+
+    const handler = () => {
+      const indices = normalizeSelectionIndices(model.get("selected_cells"));
+      setSelectedCellIndices(indices);
+      setSelectionVersion((version) => version + 1);
+    };
+
+    model.on("change:selected_cells", handler);
+    handler();
+
+    return () => {
+      model.off("change:selected_cells", handler);
+    };
+  }, [model]);
 
   useEffect(() => {
     if (!model) return;
@@ -367,6 +438,32 @@ export default function Vis({
     slicekey &&
     annotationConfig?.AvailableAnnoTypes.includes(slicekey);
 
+  const canLasso =
+    isLoaded && uiStates.showPointCloud && viewStates.layoutMode === "3d";
+
+  useEffect(() => {
+    if (!canLasso) {
+      setLassoEnabled(false);
+    }
+  }, [canLasso]);
+
+  const handleLassoToggle = useCallback(() => {
+    if (!canLasso) return;
+
+    setLassoEnabled((enabled) => !enabled);
+  }, [canLasso]);
+
+  const handleLassoSelect = useCallback(
+    (indices: number[]) => {
+      writeSelectedCellsToModel(indices, "lasso");
+    },
+    [writeSelectedCellsToModel],
+  );
+
+  const handleSelectionClear = useCallback(() => {
+    writeSelectedCellsToModel([], "clear");
+  }, [writeSelectedCellsToModel]);
+
   // Toggle DeckGL Display
   const toggleDeckGLDisplay = useCallback(async () => {
     if (uiStates.showPointCloud) {
@@ -421,10 +518,18 @@ export default function Vis({
   ]);
 
   // Dynamic layers with combined color params
-  const colorParams = {
-    ...annotationStates.colorParams,
-    NumericThreshold: uiStates.numericThreshold,
-  };
+  const colorParams = useMemo(
+    () => ({
+      ...annotationStates.colorParams,
+      NumericThreshold: uiStates.numericThreshold,
+      selectedPointIndices,
+    }),
+    [
+      annotationStates.colorParams,
+      selectedPointIndices,
+      uiStates.numericThreshold,
+    ],
+  );
 
   const layers = useDeckLayers({
     showPointCloud: uiStates.showPointCloud,
@@ -440,6 +545,8 @@ export default function Vis({
     FancyPositions: layoutMode.FancyPositions,
     colorParams,
     lazUrl,
+    selectedPointIndices,
+    selectionVersion,
   });
   // [number, number] | null
   const minMaxValue: [number, number] | null =
@@ -454,9 +561,14 @@ export default function Vis({
         isLoaded={isLoaded}
         showPointCloud={uiStates.showPointCloud}
         hasSections={hasSections}
+        lassoEnabled={lassoEnabled}
+        canLasso={canLasso}
+        selectedCount={selectedCellIndices.length}
         onContinuousOpen={() => uiStates.setContinuousOpen(true)}
         onToggleView={toggleDeckGLDisplay}
         onCapture={captureCurrentImage}
+        onLassoToggle={handleLassoToggle}
+        onSelectionClear={handleSelectionClear}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -503,6 +615,9 @@ export default function Vis({
               sectionPreviews={sectionStates.sectionPreviews}
               NumericThreshold={uiStates.numericThreshold}
               minMaxValue={minMaxValue}
+              lassoEnabled={lassoEnabled}
+              selectedCount={selectedCellIndices.length}
+              colorParams={colorParams}
               device={device}
               onViewStateUpdate={viewStates.updateViewState}
               onStViewStateUpdate={viewStates.updateStviewState}
@@ -510,6 +625,7 @@ export default function Vis({
               onSectionClick={sectionStates.handleSectionClick}
               onNumericThresholdChange={uiStates.setNumericThreshold}
               onAfterRender={handleAfterRender}
+              onLassoSelect={handleLassoSelect}
               annotationConfig={annotationConfig}
             />
           }

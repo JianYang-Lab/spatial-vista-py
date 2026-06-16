@@ -34,6 +34,24 @@ def _size_of_value(v: Any) -> int:
         return 0
 
 
+def _cell_ids_from_adata(adata, n_obs: int) -> list[str]:
+    """Return stable cell ids for mapping frontend point order back to Python."""
+    if hasattr(adata, "obs_names"):
+        try:
+            return [str(v) for v in adata.obs_names]
+        except Exception:
+            pass
+
+    obs = getattr(adata, "obs", None)
+    if hasattr(obs, "index"):
+        try:
+            return [str(v) for v in obs.index]
+        except Exception:
+            pass
+
+    return [str(i) for i in range(n_obs)]
+
+
 def _async_set_trait_and_send(
     widget: SpatialVistaWidget, trait_name: str, value: Any
 ) -> None:
@@ -159,6 +177,9 @@ def vis(
     )
 
     w = SpatialVistaWidget()
+    n_obs_value = getattr(adata, "n_obs", None)
+    n_obs = int(n_obs_value if n_obs_value is not None else len(adata.obsm[position]))
+    w.set_cell_ids(_cell_ids_from_adata(adata, n_obs))
 
     # create a small thread pool for background sends
     executor = ThreadPoolExecutor(max_workers=_async_workers)

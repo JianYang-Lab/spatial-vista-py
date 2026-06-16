@@ -8,7 +8,20 @@ export interface ColorCalculatorParams {
   NumericThreshold: number;
   customColors: Record<AnnotationType, Record<number, string>>;
   categoryColors: Record<AnnotationType, Record<number, ColorRGB>>;
+  selectedPointIndices?: Set<number>;
 }
+
+const applySelectionOpacity = (
+  color: ColorRGBA,
+  index: number,
+  selectedPointIndices?: Set<number>,
+): ColorRGBA => {
+  if (!selectedPointIndices?.size || selectedPointIndices.has(index)) {
+    return color;
+  }
+
+  return [color[0], color[1], color[2], 8];
+};
 
 // get Color func
 export const calculatePointColor = (
@@ -21,6 +34,7 @@ export const calculatePointColor = (
     NumericThreshold,
     customColors,
     categoryColors,
+    selectedPointIndices,
   }: {
     selectedCategories: Record<AnnotationType, number | null>;
     hiddenCategoryIds: Record<AnnotationType, Set<number>>;
@@ -28,6 +42,7 @@ export const calculatePointColor = (
     NumericThreshold: number;
     customColors: Record<AnnotationType, Record<number, string>>;
     categoryColors: Record<AnnotationType, Record<number, ColorRGB>>;
+    selectedPointIndices?: Set<number>;
   },
 ): ColorRGBA => {
   let shouldFilter = false;
@@ -93,12 +108,16 @@ export const calculatePointColor = (
     }
 
     const t = (v - min) / (max - min + 1e-6);
-    return [
-      Math.floor(255 * t),
-      50,
-      Math.floor(255 * (1 - t)),
-      Math.floor(180 * t),
-    ];
+    return applySelectionOpacity(
+      [
+        Math.floor(255 * t),
+        50,
+        Math.floor(255 * (1 - t)),
+        Math.floor(180 * t),
+      ],
+      index,
+      selectedPointIndices,
+    );
   }
 
   // 4. current annotation coloring
@@ -106,7 +125,11 @@ export const calculatePointColor = (
     const currentClassification = extData.annotations[coloringAnnotation];
 
     if (!currentClassification) {
-      return [200, 200, 200, 255];
+      return applySelectionOpacity(
+        [200, 200, 200, 255],
+        index,
+        selectedPointIndices,
+      );
     }
 
     const categoryId = currentClassification[index];
@@ -121,7 +144,7 @@ export const calculatePointColor = (
       customColors[coloringAnnotation]?.[numericCategoryId]
     ) {
       const rgb = hexToRgb(customColors[coloringAnnotation][numericCategoryId]);
-      return [...rgb, 255];
+      return applySelectionOpacity([...rgb, 255], index, selectedPointIndices);
     }
 
     // (C) config/categoryColors
@@ -130,11 +153,19 @@ export const calculatePointColor = (
       categoryColors[coloringAnnotation]?.[numericCategoryId]
     ) {
       const color = categoryColors[coloringAnnotation][numericCategoryId];
-      return [...color, 255];
+      return applySelectionOpacity(
+        [...color, 255],
+        index,
+        selectedPointIndices,
+      );
     }
 
     // (D) fallback to original color
 
-    return [200, 200, 200, 255];
+    return applySelectionOpacity(
+      [200, 200, 200, 255],
+      index,
+      selectedPointIndices,
+    );
   }
 };

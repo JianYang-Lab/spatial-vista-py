@@ -1,4 +1,3 @@
-import React from "react";
 import { createRoot } from "react-dom/client";
 import Vis from "./pages/Vis";
 import { ThemeProvider } from "./components/theme-provider";

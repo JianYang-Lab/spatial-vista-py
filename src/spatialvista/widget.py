@@ -36,6 +36,17 @@ class SpatialVistaWidget(anywidget.AnyWidget):
     # ========== Point cloud ==========
     laz_bytes = traitlets.Bytes(help="LAZ point cloud bytes").tag(sync=True)
 
+    # ========== Frontend selection result ==========
+    selected_cells = traitlets.Dict(
+        key_trait=traitlets.Unicode(),
+        value_trait=traitlets.Any(),
+        default_value={},
+        help=(
+            "Cells selected in the frontend. Contains selected point order "
+            "under 'indices'/'orders' and, when available, obs ids under 'ids'."
+        ),
+    ).tag(sync=True)
+
     # ========== Categorical annotations ==========
     annotation_config = traitlets.Dict(
         key_trait=traitlets.Unicode(),
@@ -71,12 +82,80 @@ class SpatialVistaWidget(anywidget.AnyWidget):
 
     def __init__(self, *args, **kwargs):
         self._created_at = time.perf_counter()
+        self._cell_ids: list[str] = []
+        self._enriching_selected_cells = False
         super().__init__(*args, **kwargs)
         logger.info("SpatialVistaWidget created at {:.6f}", self._created_at)
+
+    def set_cell_ids(self, cell_ids) -> None:
+        """Store cell ids so frontend point order can be mapped back to obs names."""
+        self._cell_ids = [str(cell_id) for cell_id in cell_ids]
+        logger.info("SpatialVistaWidget stored {} cell ids", len(self._cell_ids))
+
+    @property
+    def selected_indices(self) -> list[int]:
+        """Selected zero-based point orders from the latest frontend selection."""
+        raw = self.selected_cells or {}
+        values = raw.get("indices", raw.get("orders", []))
+        return [int(v) for v in values]
+
+    @property
+    def selected_orders(self) -> list[int]:
+        """Alias for selected_indices, matching cell order terminology."""
+        return self.selected_indices
+
+    @property
+    def selected_ids(self) -> list[str]:
+        """Selected obs ids, mapped from selected_indices when possible."""
+        raw = self.selected_cells or {}
+        ids = raw.get("ids")
+        if ids is not None:
+            return [str(v) for v in ids]
+        if not self._cell_ids:
+            return [str(i) for i in self.selected_indices]
+        return [
+            self._cell_ids[i]
+            for i in self.selected_indices
+            if 0 <= i < len(self._cell_ids)
+        ]
+
+    @traitlets.observe("selected_cells")
+    def _on_selected_cells_change(self, change):
+        if self._enriching_selected_cells:
+            return
+
+        new = change.get("new") or {}
+        if not isinstance(new, dict):
+            return
+
+        indices = new.get("indices", new.get("orders", []))
+        if not isinstance(indices, (list, tuple)):
+            return
+
+        enriched = dict(new)
+        enriched["indices"] = [int(i) for i in indices]
+        enriched["orders"] = enriched["indices"]
+
+        if self._cell_ids:
+            enriched["ids"] = [
+                self._cell_ids[i]
+                for i in enriched["indices"]
+                if 0 <= i < len(self._cell_ids)
+            ]
+
+        if enriched == new:
+            return
+
+        self._enriching_selected_cells = True
+        try:
+            self.selected_cells = enriched
+        finally:
+            self._enriching_selected_cells = False
 
     # Generic observer for several traits
     @traitlets.observe(
         "laz_bytes",
+        "selected_cells",
         "annotation_bins",
         "annotation_config",
         "continuous_bins",
@@ -96,6 +175,12 @@ class SpatialVistaWidget(anywidget.AnyWidget):
             if name == "laz_bytes":
                 size = len(new) if new is not None else 0
                 info = {"bytes": size}
+            elif name == "selected_cells":
+                if not new:
+                    info = {"count": 0}
+                else:
+                    indices = new.get("indices", new.get("orders", []))
+                    info = {"count": len(indices)}
             elif name in ("annotation_bins", "continuous_bins"):
                 if new is None:
                     count = 0
