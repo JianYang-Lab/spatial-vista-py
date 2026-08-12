@@ -28,7 +28,7 @@ pip install spatialvista
 ### Install from Source
 
 ```bash
-git clone https://github.com/yourusername/spatial-vista-py.git
+git clone https://github.com/JianYang-Lab/spatial-vista-py.git
 cd spatial-vista-py
 uv pip install -e .
 ```

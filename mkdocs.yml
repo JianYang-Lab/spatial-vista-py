@@ -1,10 +1,10 @@
 site_name: SpatialVista Documentation
 site_description: Interactive spatial transcriptomics visualization for the command line and Jupyter
-site_author: Your Name
-site_url: https://spatial-vista-py.readthedocs.io
+site_author: JianYang Lab
+site_url: https://jianyang-lab.github.io/spatial-vista-py/
 
-repo_name: spatial-vista-py
-repo_url: https://github.com/yourusername/spatial-vista-py
+repo_name: JianYang-Lab/spatial-vista-py
+repo_url: https://github.com/JianYang-Lab/spatial-vista-py
 edit_uri: edit/main/docs/
 
 theme:
@@ -47,7 +47,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/spatial-vista-py
+      link: https://github.com/JianYang-Lab/spatial-vista-py
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/spatialvista/
 
