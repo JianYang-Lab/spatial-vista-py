@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --open",
-    "build": "vite build",
+    "build": "npm run build:widget && npm run build:standalone",
+    "build:widget": "SPATIALVISTA_TARGET=widget vite build",
+    "build:standalone": "SPATIALVISTA_TARGET=standalone vite build",
     "lint": "eslint .",
     "fmt": "prettier ./src/ --write && taplo fmt src-tauri/Cargo.toml",
     "preview": "vite preview"

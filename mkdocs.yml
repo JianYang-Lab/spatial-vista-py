@@ -1,5 +1,5 @@
 site_name: SpatialVista Documentation
-site_description: Interactive 3D spatial transcriptomics visualization for Jupyter
+site_description: Interactive spatial transcriptomics visualization for the command line and Jupyter
 site_author: Your Name
 site_url: https://spatial-vista-py.readthedocs.io
 
@@ -90,6 +90,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Quick Start: quickstart.md
+  - Command Line: cli.md
   - Controls: controls.md
   - API Reference: api/index.md
   - FAQ: faq.md

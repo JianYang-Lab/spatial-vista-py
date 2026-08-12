@@ -16,16 +16,21 @@ import cssInjectedByJs from "vite-plugin-css-injected-by-js";
 
 import { defineConfig } from "vite";
 
+const standalone = process.env.SPATIALVISTA_TARGET === "standalone";
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), cssInjectedByJs()],
   build: {
+    outDir: "../src/spatialvista/_widget",
+    emptyOutDir: false,
     lib: {
-      entry: "src/anywidget_entry.tsx",
+      entry: standalone ? "src/standalone_entry.tsx" : "src/anywidget_entry.tsx",
       formats: ["es"],
-      fileName: () => "spatialvista_widget.mjs",
+      fileName: () => standalone ? "spatialvista_standalone.mjs" : "spatialvista_widget.mjs",
     },
     rollupOptions: {
       external: [],
+      output: { inlineDynamicImports: true },
     },
     cssCodeSplit: false,
   },

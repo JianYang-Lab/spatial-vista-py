@@ -1,10 +1,11 @@
 [project]
 name = "spatialvista"
-version = "0.1.2"
-description = "3D ST Visualization in Jupyter"
+version = "1.0.0"
+description = "Interactive 2D/3D spatial transcriptomics visualization for Jupyter and the browser"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "anndata>=0.10",
     "anywidget>=0.9.21",
     "laspy[lazrs]>=2.6.1",
     "loguru>=0.7.3",
@@ -12,6 +13,9 @@ dependencies = [
     "pandas>=2.3.3",
     "traitlets>=5.14.3",
 ]
+
+[project.scripts]
+spatialvista = "spatialvista.cli:main"
 
 [build-system]
 requires = ["setuptools"]

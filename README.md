@@ -1,15 +1,15 @@
-# SpatialVista - Interactive 3D Spatial Transcriptomics Visualization in Jupyter
+# SpatialVista - Interactive Spatial Transcriptomics Visualization
 
 <div align="center">
   <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
-  <img src="https://img.shields.io/badge/platform-Jupyter-orange.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/platform-CLI%20%7C%20Jupyter-orange.svg" alt="Platform">
   <img src="https://img.shields.io/badge/WebGL-pink.svg" alt="Platform">
 </div>
 
 ## Overview
 
-**SpatialVista** is an **interactive 3D spatial transcriptomics visualization tool** designed specifically for Jupyter Notebook/Lab. It seamlessly integrates into your data analysis workflow, providing efficient and intuitive exploration of spatial omics data.
+**SpatialVista** is an interactive 2D/3D spatial transcriptomics visualization tool. Open an `.h5ad` file directly from the command line in a local browser, or embed the same interface in Jupyter Notebook/Lab.
 
 ![SpatialVista](https://raw.githubusercontent.com/JianYang-Lab/spatial-vista-py/main/Figure_1.png)
 
@@ -35,6 +35,8 @@ Note that the web/app versions support the same core visualization functionaliti
 - 📐 **Multiple Layout Modes** - Support for original coordinates, 2D Treemap, histogram, and more
 - 🎯 **Precise Filtering** - Filter data points by category, numerical range, and other conditions
 - 💾 **One-Click Screenshots** - Easily save current views for publications and reports
+- 🖥️ **Local CLI Server** - Open `.h5ad` files without writing Python or starting Jupyter
+- 🪢 **Lasso Selection** - Select visible cells directly in either 2D or 3D views
 
 ## 🎯 Use Cases
 
@@ -63,7 +65,35 @@ SpatialVista is particularly suitable for:
 pip install spatialvista
 ```
 
-#### Basic Usage
+Or run it without a permanent installation:
+
+```bash
+uvx spatialvista --input data.h5ad
+```
+
+#### Command-line usage
+
+The shortest command automatically detects a common spatial coordinate key and categorical annotation:
+
+```bash
+spatialvista --input data.h5ad
+```
+
+SpatialVista starts a local server at `http://127.0.0.1:8765` and opens your browser. Override inferred keys or preload additional data when needed:
+
+```bash
+spatialvista --input data.h5ad \
+  --position spatial \
+  --color celltype \
+  --section slice_id \
+  --annotations leiden,tissue_region \
+  --continuous total_counts,n_genes_by_counts \
+  --genes PECAM1,CD3E
+```
+
+Use `spatialvista --help` for options including `--host`, `--port`, `--mode`, `--layer`, and `--no-browser`. The default host is loopback-only, so data is not exposed to other machines.
+
+#### Jupyter usage
 
 Launch your jupyter notebook or jupyter lab. And play with SpatialVista!
 
