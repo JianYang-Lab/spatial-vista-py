@@ -28,6 +28,7 @@ interface UseDeckLayersProps {
   lazUrl: string | null;
   selectedPointIndices: Set<number>;
   selectionVersion: number;
+  adjustedPositions?: Float64Array | null;
 }
 
 export const useDeckLayers = ({
@@ -46,6 +47,7 @@ export const useDeckLayers = ({
   lazUrl,
   selectedPointIndices,
   selectionVersion,
+  adjustedPositions,
 }: UseDeckLayersProps): LayersList => {
   return useMemo(() => {
     // Prefer using parsed loadedData over lazUrl so the layer uses the already-parsed object
@@ -91,7 +93,7 @@ export const useDeckLayers = ({
               colorParams.selectedCategories,
               selectionVersion,
             ],
-            getPosition: [layoutMode, FancyPositions],
+            getPosition: [layoutMode, FancyPositions, adjustedPositions],
           },
 
           getColor: (_d, { index, data }) => {
@@ -113,7 +115,7 @@ export const useDeckLayers = ({
                 FancyPositions[index * 3 + 2],
               ];
             } else {
-              const originalPos = extData.POSITION.value;
+              const originalPos = adjustedPositions ?? extData.POSITION.value;
               return [
                 originalPos[index * 3],
                 originalPos[index * 3 + 1],
@@ -215,5 +217,6 @@ export const useDeckLayers = ({
     lazUrl,
     selectedPointIndices,
     selectionVersion,
+    adjustedPositions,
   ]);
 };

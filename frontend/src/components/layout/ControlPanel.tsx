@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { OrbitViewState } from "@deck.gl/core";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,6 +26,7 @@ import {
   type AnnotationType,
   type LayoutMode,
 } from "@/types";
+import type { SectionSpacingMode } from "@/utils/sectionSpacing";
 import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
@@ -48,6 +50,10 @@ interface ControlPanelProps {
   // Point controls
   pointSize: number;
   pointOpacity: number;
+  sectionSpacing: number;
+  sectionSpacingMode: SectionSpacingMode;
+  fixedSectionSpacing: number;
+  showSectionSpacing: boolean;
 
   // States
   isLoaded: boolean;
@@ -62,6 +68,9 @@ interface ControlPanelProps {
   onResetCamera: () => void;
   onPointSizeChange: (size: number) => void;
   onPointOpacityChange: (opacity: number) => void;
+  onSectionSpacingChange: (spacing: number) => void;
+  onSectionSpacingModeChange: (mode: SectionSpacingMode) => void;
+  onFixedSectionSpacingChange: (spacing: number) => void;
   onResetPointControls: () => void;
   onViewStateUpdate: (viewState: OrbitViewState) => void;
 
@@ -76,6 +85,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   initialCamera,
   pointSize,
   pointOpacity,
+  sectionSpacing,
+  sectionSpacingMode,
+  fixedSectionSpacing,
+  showSectionSpacing,
   isLoaded,
   currentTrait,
   coloringAnnotation,
@@ -85,6 +98,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onLayoutModeToggle,
   onPointSizeChange,
   onPointOpacityChange,
+  onSectionSpacingChange,
+  onSectionSpacingModeChange,
+  onFixedSectionSpacingChange,
   onResetPointControls,
   onViewStateUpdate,
   annotationConfig,
@@ -140,9 +156,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       <PointControlsSection
         pointSize={pointSize}
         pointOpacity={pointOpacity}
+        sectionSpacing={sectionSpacing}
+        sectionSpacingMode={sectionSpacingMode}
+        fixedSectionSpacing={fixedSectionSpacing}
+        showSectionSpacing={showSectionSpacing}
         isLoaded={isLoaded}
         onPointSizeChange={onPointSizeChange}
         onPointOpacityChange={onPointOpacityChange}
+        onSectionSpacingChange={onSectionSpacingChange}
+        onSectionSpacingModeChange={onSectionSpacingModeChange}
+        onFixedSectionSpacingChange={onFixedSectionSpacingChange}
         onResetPointControls={onResetPointControls}
       />
 
@@ -397,10 +420,17 @@ const CameraControlsSection: React.FC<CameraControlsSectionProps> = ({
 interface PointControlsSectionProps {
   pointSize: number;
   pointOpacity: number;
+  sectionSpacing: number;
+  sectionSpacingMode: SectionSpacingMode;
+  fixedSectionSpacing: number;
+  showSectionSpacing: boolean;
   // logpThreshold: number;
   isLoaded: boolean;
   onPointSizeChange: (size: number) => void;
   onPointOpacityChange: (opacity: number) => void;
+  onSectionSpacingChange: (spacing: number) => void;
+  onSectionSpacingModeChange: (mode: SectionSpacingMode) => void;
+  onFixedSectionSpacingChange: (spacing: number) => void;
   // onLogpThresholdChange: (threshold: number) => void;
   onResetPointControls: () => void;
 }
@@ -408,14 +438,21 @@ interface PointControlsSectionProps {
 const PointControlsSection: React.FC<PointControlsSectionProps> = ({
   pointSize,
   pointOpacity,
+  sectionSpacing,
+  sectionSpacingMode,
+  fixedSectionSpacing,
+  showSectionSpacing,
   isLoaded,
   onPointSizeChange,
   onPointOpacityChange,
+  onSectionSpacingChange,
+  onSectionSpacingModeChange,
+  onFixedSectionSpacingChange,
   onResetPointControls,
 }) => (
   <Card className="w-full p-2 rounded-md">
     <CardHeader className="items-center pb-0 px-1">
-      <CardTitle>Piont Controls</CardTitle>
+      <CardTitle>Point Controls</CardTitle>
       <CardAction>
         <Button
           variant="outline"
@@ -445,6 +482,68 @@ const PointControlsSection: React.FC<PointControlsSectionProps> = ({
           disabled={!isLoaded}
         />
       </div>
+      {showSectionSpacing && (
+        <div className="space-y-2 my-2">
+          <div className="flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1"
+              variant={
+                sectionSpacingMode === "multiplier" ? "default" : "outline"
+              }
+              onClick={() => onSectionSpacingModeChange("multiplier")}
+            >
+              Multiplier
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1"
+              variant={sectionSpacingMode === "fixed" ? "default" : "outline"}
+              onClick={() => onSectionSpacingModeChange("fixed")}
+            >
+              Fixed distance
+            </Button>
+          </div>
+          {sectionSpacingMode === "multiplier" ? (
+            <>
+              <div className="flex justify-between">
+                <label className="text-sm">Slice spacing</label>
+                <span className="text-xs">{sectionSpacing.toFixed(1)}×</span>
+              </div>
+              <Slider
+                min={0}
+                max={5}
+                step={0.1}
+                value={[sectionSpacing]}
+                onValueChange={(values) => onSectionSpacingChange(values[0])}
+                disabled={!isLoaded}
+              />
+            </>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-sm" htmlFor="fixed-slice-spacing">
+                Z distance
+              </label>
+              <Input
+                id="fixed-slice-spacing"
+                type="number"
+                min={0}
+                step="any"
+                value={fixedSectionSpacing}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value) && value >= 0) {
+                    onFixedSectionSpacingChange(value);
+                  }
+                }}
+                disabled={!isLoaded}
+              />
+            </div>
+          )}
+        </div>
+      )}
       <div className="space-y-2 my-2">
         <div className="flex justify-between">
           <label className="text-sm">Opacity</label>

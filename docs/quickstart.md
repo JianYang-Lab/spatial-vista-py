@@ -51,7 +51,7 @@ spatialvista --input data.h5ad \
   --genes Pecam1,Cd3e
 ```
 
-The browser interface provides the same rendering, filtering, layouts, lasso selection, section navigation, and screenshot tools as the Jupyter widget. Run `spatialvista --help` for all options. By default the server listens only on your computer; use `--host` only when you intentionally want a different network interface.
+The browser interface provides the same rendering, filtering, layouts, lasso selection, adjustable 3D slice spacing, section navigation, and screenshot tools as the Jupyter widget. Run `spatialvista --help` for all options. By default the server listens only on your computer; use `--host` only when you intentionally want a different network interface.
 
 ## Jupyter example
 

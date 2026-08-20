@@ -12,6 +12,7 @@ type LassoSelectionParams = {
   viewport: Viewport;
   extData: ExtData;
   colorParams: ColorCalculatorParams;
+  positions?: Float64Array | null;
 };
 
 const pointInPolygon = (point: ScreenPoint, polygon: ScreenPoint[]) => {
@@ -101,12 +102,13 @@ export const getLassoSelectedIndices = ({
   viewport,
   extData,
   colorParams,
+  positions: positionOverride,
 }: LassoSelectionParams) => {
   if (polygon.length < 3 || !extData.POSITION?.value) {
     return [];
   }
 
-  const positions = extData.POSITION.value;
+  const positions = positionOverride ?? extData.POSITION.value;
   const { minX, minY, maxX, maxY } = getPolygonBounds(polygon);
   const selected: number[] = [];
   const count = Math.floor(positions.length / 3);

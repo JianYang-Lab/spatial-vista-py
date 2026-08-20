@@ -51,6 +51,7 @@ interface VisualizationAreaProps {
   lassoEnabled: boolean;
   selectedCount: number;
   colorParams: ColorCalculatorParams;
+  adjustedPositions?: Float64Array | null;
 
   // Device
   device?: Device;
@@ -86,6 +87,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
   lassoEnabled,
   selectedCount,
   colorParams,
+  adjustedPositions,
   device,
   onViewStateUpdate,
   onStViewStateUpdate,
@@ -139,13 +141,20 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
           viewport,
           extData: loadedData.extData,
           colorParams,
+          positions: adjustedPositions,
         });
         onLassoSelect(selected);
       }
     }
 
     resetLassoStroke();
-  }, [colorParams, loadedData, onLassoSelect, resetLassoStroke]);
+  }, [
+    adjustedPositions,
+    colorParams,
+    loadedData,
+    onLassoSelect,
+    resetLassoStroke,
+  ]);
 
   const handleLassoPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {

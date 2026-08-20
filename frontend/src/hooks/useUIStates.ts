@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { SectionSpacingMode } from "@/utils/sectionSpacing";
 
 export interface UseUIStatesReturn {
   // Dialog states
@@ -12,6 +13,9 @@ export interface UseUIStatesReturn {
   // Point controls
   pointSize: number;
   pointOpacity: number;
+  sectionSpacing: number;
+  sectionSpacingMode: SectionSpacingMode;
+  fixedSectionSpacing: number;
   numericThreshold: number;
 
   // Actions
@@ -21,6 +25,9 @@ export interface UseUIStatesReturn {
   setShowScatterplot: (show: boolean) => void;
   setPointSize: (size: number) => void;
   setPointOpacity: (opacity: number) => void;
+  setSectionSpacing: (spacing: number) => void;
+  setSectionSpacingMode: (mode: SectionSpacingMode) => void;
+  setFixedSectionSpacing: (spacing: number) => void;
   setNumericThreshold: (threshold: number) => void;
 }
 
@@ -36,6 +43,10 @@ export const useUIStates = (): UseUIStatesReturn => {
   // Point controls
   const [pointSize, setPointSize] = useState<number>(1);
   const [pointOpacity, setPointOpacity] = useState<number>(1);
+  const [sectionSpacing, setSectionSpacing] = useState<number>(1);
+  const [sectionSpacingMode, setSectionSpacingMode] =
+    useState<SectionSpacingMode>("multiplier");
+  const [fixedSectionSpacing, setFixedSectionSpacing] = useState<number>(100);
   const [numericThreshold, setNumericThreshold] = useState<number>(0);
 
   return {
@@ -45,6 +56,9 @@ export const useUIStates = (): UseUIStatesReturn => {
     showScatterplot,
     pointSize,
     pointOpacity,
+    sectionSpacing,
+    sectionSpacingMode,
+    fixedSectionSpacing,
     numericThreshold,
     setContinuousOpen,
     setColorPickerOpen,
@@ -52,6 +66,9 @@ export const useUIStates = (): UseUIStatesReturn => {
     setShowScatterplot,
     setPointSize,
     setPointOpacity,
+    setSectionSpacing,
+    setSectionSpacingMode,
+    setFixedSectionSpacing,
     setNumericThreshold,
   };
 };

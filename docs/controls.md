@@ -45,6 +45,15 @@ Control the transparency of points.
 - Lower values: More transparent (better for seeing overlapping structures)
 - Higher values: More opaque (better for sparse data)
 
+### Slice Spacing
+
+For 3D datasets loaded with a `section` key, use **Slice spacing** in Point Controls to adjust stacked slices along the Z axis:
+
+- **Multiplier** scales the original distance between section centers. `1.0×` keeps the original spacing, `0×` aligns the centers, and values up to `5.0×` expand the stack.
+- **Fixed distance** assigns a uniform numeric Z distance between adjacent section centers, such as `100`, regardless of their original spacing.
+
+The controls are available only in the 3D point-cloud view. Both modes preserve Z variation within each slice.
+
 ### Layout Modes
 
 Switch between different spatial arrangements:

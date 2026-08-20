@@ -117,6 +117,8 @@ widget = spv.vis(
 )
 ```
 
+In the 3D point-cloud view, datasets with `section` information provide **Slice spacing** controls. Spacing can be adjusted as a multiplier of the original Z distances or as an exact uniform distance between adjacent section centers.
+
 ### 🎨 Interactive Controls
 
 Once displayed, the widget provides rich interactive controls for exploring your data:

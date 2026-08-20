@@ -37,6 +37,7 @@ Note that the web/app versions support the same core visualization functionaliti
 - 💾 **One-Click Screenshots** - Easily save current views for publications and reports
 - 🖥️ **Local CLI Server** - Open `.h5ad` files without writing Python or starting Jupyter
 - 🪢 **Lasso Selection** - Select visible cells directly in either 2D or 3D views
+- ↕️ **Adjustable Slice Spacing** - Expand or compress stacked sections along Z in 3D
 
 ## 🎯 Use Cases
 
@@ -189,6 +190,8 @@ widget = spv.vis(
     section="slice_id",  # Section identifier field for section browser
 )
 ```
+
+When `section` is provided, the 3D Point Controls panel includes **Slice spacing** controls. **Multiplier** mode scales the original spacing (`1.0×` preserves it), while **Fixed distance** assigns an exact uniform Z distance such as `100` between adjacent section centers. Both modes preserve within-section Z variation.
 
 ### 🎨 Interactive Controls
 

@@ -21,6 +21,7 @@ import { ColorPickerDialog } from "@/components/dialogs/ColorPickerDialog";
 import { useWidgetModel } from "@/widget_context";
 import { parseContinuousArray } from "@/utils/helpers";
 import { decodeFloat16 } from "@/utils/helpers";
+import { applySectionSpacing } from "@/utils/sectionSpacing";
 import type {
   AnnotationConfig,
   ContinuousConfig,
@@ -531,6 +532,28 @@ export default function Vis({
     ],
   );
 
+  const sectionAnnotations = hasSections
+    ? loadedData?.extData.annotations[slicekey]
+    : null;
+  const adjustedPositions = useMemo(() => {
+    const positions = loadedData?.extData.POSITION?.value;
+    if (!positions || !sectionAnnotations) return null;
+    return applySectionSpacing(
+      positions,
+      sectionAnnotations,
+      uiStates.sectionSpacingMode,
+      uiStates.sectionSpacingMode === "fixed"
+        ? uiStates.fixedSectionSpacing
+        : uiStates.sectionSpacing,
+    );
+  }, [
+    loadedData,
+    sectionAnnotations,
+    uiStates.fixedSectionSpacing,
+    uiStates.sectionSpacing,
+    uiStates.sectionSpacingMode,
+  ]);
+
   const layers = useDeckLayers({
     showPointCloud: uiStates.showPointCloud,
     showScatterplot: uiStates.showScatterplot,
@@ -547,6 +570,7 @@ export default function Vis({
     lazUrl,
     selectedPointIndices,
     selectionVersion,
+    adjustedPositions,
   });
   // [number, number] | null
   const minMaxValue: [number, number] | null =
@@ -618,6 +642,7 @@ export default function Vis({
               lassoEnabled={lassoEnabled}
               selectedCount={selectedCellIndices.length}
               colorParams={colorParams}
+              adjustedPositions={adjustedPositions}
               device={device}
               onViewStateUpdate={viewStates.updateViewState}
               onStViewStateUpdate={viewStates.updateStviewState}
@@ -641,6 +666,14 @@ export default function Vis({
             initialCamera={viewStates.initialCamera}
             pointSize={uiStates.pointSize}
             pointOpacity={uiStates.pointOpacity}
+            sectionSpacing={uiStates.sectionSpacing}
+            sectionSpacingMode={uiStates.sectionSpacingMode}
+            fixedSectionSpacing={uiStates.fixedSectionSpacing}
+            showSectionSpacing={
+              !!hasSections &&
+              uiStates.showPointCloud &&
+              viewStates.layoutMode === "3d"
+            }
             isLoaded={isLoaded}
             currentTrait={activeContinuous}
             coloringAnnotation={annotationStates.coloringAnnotation}
@@ -657,9 +690,15 @@ export default function Vis({
             }}
             onPointSizeChange={uiStates.setPointSize}
             onPointOpacityChange={uiStates.setPointOpacity}
+            onSectionSpacingChange={uiStates.setSectionSpacing}
+            onSectionSpacingModeChange={uiStates.setSectionSpacingMode}
+            onFixedSectionSpacingChange={uiStates.setFixedSectionSpacing}
             onResetPointControls={() => {
               uiStates.setPointSize(1);
               uiStates.setPointOpacity(1);
+              uiStates.setSectionSpacing(1);
+              uiStates.setSectionSpacingMode("multiplier");
+              uiStates.setFixedSectionSpacing(100);
               uiStates.setNumericThreshold(minMaxValue ? minMaxValue[0] : 0);
             }}
             onViewStateUpdate={viewStates.updateViewState}
