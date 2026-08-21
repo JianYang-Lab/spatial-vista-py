@@ -1,6 +1,6 @@
 [project]
 name = "spatialvista"
-version = "1.0.1"
+version = "1.1.0"
 description = "Interactive 2D/3D spatial transcriptomics visualization for Jupyter and the browser"
 readme = "README.md"
 requires-python = ">=3.10"

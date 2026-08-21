@@ -38,6 +38,7 @@ Note that the web/app versions support the same core visualization functionaliti
 - 🖥️ **Local CLI Server** - Open `.h5ad` files without writing Python or starting Jupyter
 - 🪢 **Lasso Selection** - Select visible cells directly in either 2D or 3D views
 - ↕️ **Adjustable Slice Spacing** - Expand or compress stacked sections along Z in 3D
+- 🧭 **Section Alignment** - Translate, rotate, scale, flip, and align slices from annotations, tissue outlines, or both
 
 ## 🎯 Use Cases
 
@@ -192,6 +193,24 @@ widget = spv.vis(
 ```
 
 When `section` is provided, the 3D Point Controls panel includes **Slice spacing** controls. **Multiplier** mode scales the original spacing (`1.0×` preserves it), while **Fixed distance** assigns an exact uniform Z distance such as `100` between adjacent section centers. Both modes preserve within-section Z variation.
+
+The **Section Alignment** panel lets you choose reference and active slices and manually fine-tune XY translation, rotation, scale, and X/Y flipping. Translation uses a compact XY drag pad and rotation uses a direct manipulation dial; drag controls render immediately, while numeric values apply on Enter. **Auto align** supports annotation landmarks, complete tissue outlines, or a hybrid score that combines both. Batch workflows can align every section to the first section or align them sequentially as `S1 → S2 → S3 → …`. The outline search uses a bounded, downsampled boundary representation, while the hybrid mode exposes an annotation-weight control. Automatic scaling is opt-in and safely limited to avoid extreme estimates. In Jupyter, materialize the current result as a new AnnData coordinate matrix:
+
+```python
+widget = spv.vis(
+    adata,
+    position="spatial",
+    color="celltype",
+    section="slice_id",
+    annotations=["organ"],
+)
+
+# After aligning slices in the widget:
+widget.apply_alignment(output_key="spatial_aligned")
+# adata.obsm["spatial_aligned"] now contains the aligned 3D coordinates
+```
+
+The current JSON-compatible parameters are also available as `widget.alignment_parameters` and can be downloaded from the alignment panel.
 
 ### 🎨 Interactive Controls
 

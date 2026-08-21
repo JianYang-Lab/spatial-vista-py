@@ -14,6 +14,10 @@ import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { VisHeader } from "@/components/layout/VisHeader";
 import { AnnotationPanel } from "@/components/layout/AnnotationPanel";
 import { ControlPanel } from "@/components/layout/ControlPanel";
+import {
+  AlignmentPanel,
+  type AlignmentWorkflow,
+} from "@/components/layout/AlignmentPanel";
 import { VisualizationArea } from "@/components/layout/VisualizationArea";
 import { ContinuousSelectionDialog } from "@/components/dialogs/ContinuousSelectionDialog";
 import { ColorPickerDialog } from "@/components/dialogs/ColorPickerDialog";
@@ -22,6 +26,14 @@ import { useWidgetModel } from "@/widget_context";
 import { parseContinuousArray } from "@/utils/helpers";
 import { decodeFloat16 } from "@/utils/helpers";
 import { applySectionSpacing } from "@/utils/sectionSpacing";
+import {
+  applySectionAlignment,
+  IDENTITY_SECTION_TRANSFORM,
+  suggestSectionAlignment,
+  type AlignmentMode,
+  type SectionTransform,
+  type SectionTransforms,
+} from "@/utils/sectionAlignment";
 import type {
   AnnotationConfig,
   ContinuousConfig,
@@ -134,6 +146,18 @@ export default function Vis({
   const [lassoEnabled, setLassoEnabled] = useState(false);
   const [selectedCellIndices, setSelectedCellIndices] = useState<number[]>([]);
   const [selectionVersion, setSelectionVersion] = useState(0);
+  const [sectionTransforms, setSectionTransforms] = useState<SectionTransforms>(
+    {},
+  );
+  const [activeAlignmentSection, setActiveAlignmentSection] = useState(0);
+  const [referenceAlignmentSection, setReferenceAlignmentSection] = useState(0);
+  const [alignmentAnnotation, setAlignmentAnnotation] = useState("");
+  const [allowAutoScale, setAllowAutoScale] = useState(false);
+  const [alignmentMode, setAlignmentMode] = useState<AlignmentMode>("hybrid");
+  const [alignmentAnnotationWeight, setAlignmentAnnotationWeight] =
+    useState(0.5);
+  const [autoAlignStatus, setAutoAlignStatus] = useState("");
+  const [workflowRunning, setWorkflowRunning] = useState(false);
 
   const selectedPointIndices = useMemo(
     () => new Set(selectedCellIndices),
@@ -439,6 +463,36 @@ export default function Vis({
     slicekey &&
     annotationConfig?.AvailableAnnoTypes.includes(slicekey);
 
+  const sectionOptions = useMemo(
+    () => annotationConfig?.AnnoMaps[slicekey]?.Items ?? [],
+    [annotationConfig, slicekey],
+  );
+
+  useEffect(() => {
+    if (sectionOptions.length === 0) return;
+    const codes = sectionOptions.map((item) => item.Code);
+    if (!codes.includes(referenceAlignmentSection)) {
+      setReferenceAlignmentSection(codes[0]);
+    }
+    if (
+      !codes.includes(activeAlignmentSection) ||
+      (codes.length > 1 && activeAlignmentSection === referenceAlignmentSection)
+    ) {
+      setActiveAlignmentSection(
+        codes.find((code) => code !== referenceAlignmentSection) ?? codes[0],
+      );
+    }
+  }, [activeAlignmentSection, referenceAlignmentSection, sectionOptions]);
+
+  useEffect(() => {
+    const keys = annotationConfig?.AvailableAnnoTypes ?? [];
+    if (!keys.includes(alignmentAnnotation)) {
+      setAlignmentAnnotation(
+        keys.find((key) => key !== slicekey) ?? keys[0] ?? "",
+      );
+    }
+  }, [alignmentAnnotation, annotationConfig, slicekey]);
+
   const canLasso =
     isLoaded && uiStates.showPointCloud && viewStates.layoutMode === "3d";
 
@@ -538,8 +592,13 @@ export default function Vis({
   const adjustedPositions = useMemo(() => {
     const positions = loadedData?.extData.POSITION?.value;
     if (!positions || !sectionAnnotations) return null;
-    return applySectionSpacing(
+    const aligned = applySectionAlignment(
       positions,
+      sectionAnnotations,
+      sectionTransforms,
+    );
+    return applySectionSpacing(
+      aligned,
       sectionAnnotations,
       uiStates.sectionSpacingMode,
       uiStates.sectionSpacingMode === "fixed"
@@ -549,10 +608,212 @@ export default function Vis({
   }, [
     loadedData,
     sectionAnnotations,
+    sectionTransforms,
     uiStates.fixedSectionSpacing,
     uiStates.sectionSpacing,
     uiStates.sectionSpacingMode,
   ]);
+
+  const alignmentPayload = useMemo(() => {
+    const labelsByCode = new Map(
+      sectionOptions.map((item) => [item.Code, item.Name]),
+    );
+    return {
+      version: 1,
+      section_key: slicekey,
+      reference_section: labelsByCode.get(referenceAlignmentSection) ?? null,
+      active_section: labelsByCode.get(activeAlignmentSection) ?? null,
+      annotation: alignmentAnnotation,
+      auto_alignment: {
+        mode: alignmentMode,
+        annotation_weight: alignmentAnnotationWeight,
+        allow_scale: allowAutoScale,
+      },
+      z_spacing: {
+        mode: uiStates.sectionSpacingMode,
+        value:
+          uiStates.sectionSpacingMode === "fixed"
+            ? uiStates.fixedSectionSpacing
+            : uiStates.sectionSpacing,
+      },
+      transforms: Object.fromEntries(
+        sectionOptions.map((item) => {
+          const transform =
+            sectionTransforms[item.Code] ?? IDENTITY_SECTION_TRANSFORM;
+          return [
+            item.Name,
+            {
+              translate_x: transform.translateX,
+              translate_y: transform.translateY,
+              rotation: transform.rotation,
+              scale: transform.scale,
+              flip_x: transform.flipX,
+              flip_y: transform.flipY,
+            },
+          ];
+        }),
+      ),
+    };
+  }, [
+    activeAlignmentSection,
+    alignmentAnnotation,
+    alignmentAnnotationWeight,
+    alignmentMode,
+    allowAutoScale,
+    referenceAlignmentSection,
+    sectionOptions,
+    sectionTransforms,
+    slicekey,
+    uiStates.fixedSectionSpacing,
+    uiStates.sectionSpacing,
+    uiStates.sectionSpacingMode,
+  ]);
+
+  useEffect(() => {
+    if (!hasSections) return;
+    model.set("alignment_transforms", alignmentPayload);
+    model.save_changes?.();
+  }, [alignmentPayload, hasSections, model]);
+
+  const updateActiveTransform = useCallback(
+    (transform: SectionTransform) => {
+      setSectionTransforms((current) => ({
+        ...current,
+        [activeAlignmentSection]: transform,
+      }));
+    },
+    [activeAlignmentSection],
+  );
+
+  const handleAutoAlign = useCallback(() => {
+    const positions = loadedData?.extData.POSITION?.value;
+    const annotations = loadedData?.extData.annotations[alignmentAnnotation];
+    if (!positions || !sectionAnnotations) {
+      setAutoAlignStatus("Position or section data is not available.");
+      return;
+    }
+    if (alignmentMode === "annotation" && !annotations) {
+      setAutoAlignStatus("The selected annotation is not loaded.");
+      return;
+    }
+    try {
+      const suggestion = suggestSectionAlignment(
+        positions,
+        sectionAnnotations,
+        annotations ?? null,
+        activeAlignmentSection,
+        referenceAlignmentSection,
+        allowAutoScale,
+        alignmentMode,
+        alignmentAnnotationWeight,
+      );
+      if (suggestion) {
+        updateActiveTransform(suggestion);
+        setAutoAlignStatus("Alignment applied.");
+      } else {
+        setAutoAlignStatus("No usable outline or shared landmarks were found.");
+      }
+    } catch (error) {
+      setAutoAlignStatus(
+        error instanceof Error ? error.message : "Auto align failed.",
+      );
+    }
+  }, [
+    activeAlignmentSection,
+    alignmentAnnotation,
+    alignmentAnnotationWeight,
+    alignmentMode,
+    loadedData,
+    referenceAlignmentSection,
+    sectionAnnotations,
+    updateActiveTransform,
+    allowAutoScale,
+  ]);
+
+  const handleAlignmentWorkflow = useCallback(
+    async (workflow: AlignmentWorkflow) => {
+      const positions = loadedData?.extData.POSITION?.value;
+      const annotations = loadedData?.extData.annotations[alignmentAnnotation];
+      if (!positions || !sectionAnnotations || sectionOptions.length < 2) {
+        setAutoAlignStatus("At least two sections are required.");
+        return;
+      }
+      if (alignmentMode === "annotation" && !annotations) {
+        setAutoAlignStatus("The selected annotation is not loaded.");
+        return;
+      }
+
+      setWorkflowRunning(true);
+      const nextTransforms: SectionTransforms = {};
+      let alignedCount = 0;
+      try {
+        for (let index = 1; index < sectionOptions.length; index += 1) {
+          const referenceIndex = workflow === "fixed-first" ? 0 : index - 1;
+          const referenceSection = sectionOptions[referenceIndex].Code;
+          const activeSection = sectionOptions[index].Code;
+          setReferenceAlignmentSection(referenceSection);
+          setActiveAlignmentSection(activeSection);
+          setAutoAlignStatus(
+            `Aligning ${sectionOptions[index].Name} (${index}/${sectionOptions.length - 1})…`,
+          );
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          );
+
+          const currentPositions = applySectionAlignment(
+            positions,
+            sectionAnnotations,
+            nextTransforms,
+          );
+          const suggestion = suggestSectionAlignment(
+            currentPositions,
+            sectionAnnotations,
+            annotations ?? null,
+            activeSection,
+            referenceSection,
+            allowAutoScale,
+            alignmentMode,
+            alignmentAnnotationWeight,
+          );
+          if (suggestion) {
+            nextTransforms[activeSection] = suggestion;
+            alignedCount += 1;
+            setSectionTransforms({ ...nextTransforms });
+          }
+        }
+        setAutoAlignStatus(
+          `Workflow complete: ${alignedCount}/${sectionOptions.length - 1} sections aligned.`,
+        );
+      } catch (error) {
+        setAutoAlignStatus(
+          error instanceof Error ? error.message : "Alignment workflow failed.",
+        );
+      } finally {
+        setWorkflowRunning(false);
+      }
+    },
+    [
+      alignmentAnnotation,
+      alignmentAnnotationWeight,
+      alignmentMode,
+      allowAutoScale,
+      loadedData,
+      sectionAnnotations,
+      sectionOptions,
+    ],
+  );
+
+  const exportAlignment = useCallback(() => {
+    const blob = new Blob([JSON.stringify(alignmentPayload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "spatialvista-alignment.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [alignmentPayload]);
 
   const layers = useDeckLayers({
     showPointCloud: uiStates.showPointCloud,
@@ -579,7 +840,7 @@ export default function Vis({
       : null;
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex h-full min-h-0 w-full flex-col">
       {/* Header */}
       <VisHeader
         isLoaded={isLoaded}
@@ -595,9 +856,9 @@ export default function Vis({
         onSelectionClear={handleSelectionClear}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-stretch overflow-hidden">
         {/* Annotation Panel */}
-        <div className="hidden md:w-[10%] p-2 overflow-y-auto h-full md:flex flex-col md:min-w-[120px]">
+        <div className="hidden min-h-0 self-stretch p-2 md:flex md:w-[10%] md:min-w-[120px] md:flex-col">
           <AnnotationPanel
             annotationConfig={annotationConfig}
             loadedAnnotations={loadedAnnotations}
@@ -619,7 +880,7 @@ export default function Vis({
 
         {/* Visualization Area */}
         <div
-          className="flex-1 min-w-0 h-full relative lg:w-[70%]"
+          className="relative min-h-0 min-w-0 flex-1 self-stretch lg:w-[70%]"
           ref={vizContainerRef}
         >
           {
@@ -657,7 +918,58 @@ export default function Vis({
         </div>
 
         {/* Control Panel */}
-        <div className="hidden md:w-[20%] p-2 space-y-3 md:flex flex-col h-full overflow-y-auto">
+        <div className="hidden min-h-0 self-stretch space-y-3 overflow-y-auto p-2 md:flex md:w-[20%] md:flex-col">
+          {!!hasSections &&
+            uiStates.showPointCloud &&
+            viewStates.layoutMode === "3d" && (
+              <AlignmentPanel
+                sections={sectionOptions.map((item) => ({
+                  code: item.Code,
+                  name: item.Name,
+                }))}
+                annotationKeys={
+                  annotationConfig?.AvailableAnnoTypes.filter(
+                    (key) => key !== slicekey,
+                  ) ?? []
+                }
+                activeSection={activeAlignmentSection}
+                referenceSection={referenceAlignmentSection}
+                annotationKey={alignmentAnnotation}
+                transform={
+                  sectionTransforms[activeAlignmentSection] ??
+                  IDENTITY_SECTION_TRANSFORM
+                }
+                adjustmentRange={Math.max(
+                  loadedData?.header?.boundingBox
+                    ? Math.max(
+                        loadedData.header.boundingBox[1][0] -
+                          loadedData.header.boundingBox[0][0],
+                        loadedData.header.boundingBox[1][1] -
+                          loadedData.header.boundingBox[0][1],
+                      )
+                    : 100,
+                  1,
+                )}
+                allowAutoScale={allowAutoScale}
+                alignmentMode={alignmentMode}
+                annotationWeight={alignmentAnnotationWeight}
+                autoAlignStatus={autoAlignStatus}
+                workflowRunning={workflowRunning}
+                onActiveSectionChange={setActiveAlignmentSection}
+                onReferenceSectionChange={setReferenceAlignmentSection}
+                onAnnotationKeyChange={setAlignmentAnnotation}
+                onTransformChange={updateActiveTransform}
+                onAllowAutoScaleChange={setAllowAutoScale}
+                onAlignmentModeChange={setAlignmentMode}
+                onAnnotationWeightChange={setAlignmentAnnotationWeight}
+                onAutoAlign={handleAutoAlign}
+                onRunWorkflow={handleAlignmentWorkflow}
+                onReset={() =>
+                  updateActiveTransform(IDENTITY_SECTION_TRANSFORM)
+                }
+                onExport={exportAlignment}
+              />
+            )}
           <ControlPanel
             activeZoom={viewStates.activeZoom}
             autoRotate={viewStates.autoRotate}

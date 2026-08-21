@@ -180,6 +180,7 @@ def vis(
     n_obs_value = getattr(adata, "n_obs", None)
     n_obs = int(n_obs_value if n_obs_value is not None else len(adata.obsm[position]))
     w.set_cell_ids(_cell_ids_from_adata(adata, n_obs))
+    w.set_alignment_source(adata, position, section)
 
     # create a small thread pool for background sends
     executor = ThreadPoolExecutor(max_workers=_async_workers)

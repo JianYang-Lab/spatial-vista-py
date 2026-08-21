@@ -49,10 +49,37 @@ Control the transparency of points.
 
 For 3D datasets loaded with a `section` key, use **Slice spacing** in Point Controls to adjust stacked slices along the Z axis:
 
-- **Multiplier** scales the original distance between section centers. `1.0×` keeps the original spacing, `0×` aligns the centers, and values up to `5.0×` expand the stack.
+- **Multiplier** scales the original distance between section centers. `1.0×` keeps the original spacing, `0×` aligns the centers, and values up to `10.0×` expand the stack.
 - **Fixed distance** assigns a uniform numeric Z distance between adjacent section centers, such as `100`, regardless of their original spacing.
 
 The controls are available only in the 3D point-cloud view. Both modes preserve Z variation within each slice.
+
+### Section Alignment
+
+For datasets with section information, the **Section Alignment** panel supports per-slice XY translation, rotation, uniform scaling, and X/Y flipping:
+
+1. Choose a fixed **Reference section**.
+2. Choose the **Active section** to transform.
+3. Choose **Hybrid**, **Outline only**, or **Annotation only**.
+4. For modes that use annotations, select a field such as `organ` or `celltype`. Hybrid mode also lets you balance outline and annotation evidence.
+5. Click **Auto align**, then fine-tune the numeric controls while viewing the result.
+
+Numeric inputs apply only when Enter is pressed. The compact XY pad, rotation dial, and sliders update the point cloud immediately during mouse or touch movement. Flip buttons also apply immediately. Hover over the question-mark button in the panel header for a compact interaction guide.
+
+**Annotation only** matches the centers of shared categories. **Outline only** rasterizes each slice to a small occupancy grid, extracts at most 320 boundary representatives, and minimizes a symmetric Chamfer distance between the two boundaries. **Hybrid** combines normalized outline and annotation errors using the selected weight. All modes evaluate unflipped, X-flipped, Y-flipped, and XY-flipped candidates. Outline-based modes perform a coarse rotation search followed by two local refinement passes.
+
+Automatic scaling is disabled by default because sparse landmarks or genuinely different adjacent tissue outlines can produce misleading scale estimates. When explicitly enabled, the estimated scale is clamped to `0.5–2×`. Use **Export alignment JSON** to save the auto-alignment settings, transforms, flips, and Z-spacing settings.
+
+Two batch workflows are available. **First → all** keeps the first section as the reference and aligns every later section to it. **S1 → S2 → …** aligns the second section to the first, then uses the aligned second section as the reference for the third, continuing through the stack. Starting either workflow replaces the current per-section transforms with the new workflow result.
+
+In Jupyter, the same parameters are synchronized to the widget:
+
+```python
+widget.alignment_parameters
+widget.apply_alignment(output_key="spatial_aligned")
+```
+
+The second command writes aligned three-dimensional coordinates to `adata.obsm["spatial_aligned"]`.
 
 ### Layout Modes
 

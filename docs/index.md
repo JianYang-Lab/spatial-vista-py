@@ -119,6 +119,8 @@ widget = spv.vis(
 
 In the 3D point-cloud view, datasets with `section` information provide **Slice spacing** controls. Spacing can be adjusted as a multiplier of the original Z distances or as an exact uniform distance between adjacent section centers.
 
+SpatialVista also supports interactive section alignment. Select reference and active slices, adjust translation, rotation, scale, and flips, or automatically align annotation landmarks, complete tissue outlines, or a weighted combination of both. Jupyter users can write the aligned coordinates back with `widget.apply_alignment("spatial_aligned")`.
+
 ### 🎨 Interactive Controls
 
 Once displayed, the widget provides rich interactive controls for exploring your data:

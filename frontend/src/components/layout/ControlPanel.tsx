@@ -514,7 +514,7 @@ const PointControlsSection: React.FC<PointControlsSectionProps> = ({
               </div>
               <Slider
                 min={0}
-                max={5}
+                max={10}
                 step={0.1}
                 value={[sectionSpacing]}
                 onValueChange={(values) => onSectionSpacingChange(values[0])}

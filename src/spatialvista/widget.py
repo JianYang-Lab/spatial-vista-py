@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import anywidget
+import numpy as np
 import traitlets
 
 from ._logger import logger
@@ -80,10 +81,20 @@ class SpatialVistaWidget(anywidget.AnyWidget):
         help="Global configuration passed to frontend (e.g. {'GlobalConfig': {'Height': 600}})",
     ).tag(sync=True)
 
+    alignment_transforms = traitlets.Dict(
+        key_trait=traitlets.Unicode(),
+        value_trait=traitlets.Any(),
+        default_value={},
+        help="Section alignment parameters produced by the frontend",
+    ).tag(sync=True)
+
     def __init__(self, *args, **kwargs):
         self._created_at = time.perf_counter()
         self._cell_ids: list[str] = []
         self._enriching_selected_cells = False
+        self._alignment_adata = None
+        self._alignment_position_key: str | None = None
+        self._alignment_section_key: str | None = None
         super().__init__(*args, **kwargs)
         logger.info("SpatialVistaWidget created at {:.6f}", self._created_at)
 
@@ -91,6 +102,112 @@ class SpatialVistaWidget(anywidget.AnyWidget):
         """Store cell ids so frontend point order can be mapped back to obs names."""
         self._cell_ids = [str(cell_id) for cell_id in cell_ids]
         logger.info("SpatialVistaWidget stored {} cell ids", len(self._cell_ids))
+
+    def set_alignment_source(
+        self, adata, position_key: str, section_key: str | None
+    ) -> None:
+        """Keep the AnnData source needed to materialize aligned coordinates."""
+        self._alignment_adata = adata
+        self._alignment_position_key = position_key
+        self._alignment_section_key = section_key
+
+    @property
+    def alignment_parameters(self) -> dict:
+        """Return the latest JSON-compatible section alignment parameters."""
+        return dict(self.alignment_transforms or {})
+
+    def apply_alignment(self, output_key: str = "spatial_aligned") -> np.ndarray:
+        """Apply frontend alignment and write 3D coordinates to ``adata.obsm``.
+
+        Parameters
+        ----------
+        output_key : str, default "spatial_aligned"
+            Destination key in ``adata.obsm``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The aligned ``(n_obs, 3)`` coordinates.
+        """
+        if self._alignment_adata is None or self._alignment_position_key is None:
+            raise RuntimeError(
+                "This widget is not attached to an AnnData alignment source."
+            )
+        if self._alignment_section_key is None:
+            raise RuntimeError("Alignment requires vis(..., section=...).")
+        params = self.alignment_parameters
+        if not params:
+            raise RuntimeError(
+                "No alignment parameters have been received from the frontend."
+            )
+
+        adata = self._alignment_adata
+        source = np.asarray(adata.obsm[self._alignment_position_key], dtype=float)
+        if source.ndim != 2 or source.shape[1] not in (2, 3):
+            raise ValueError(
+                "Alignment source coordinates must have shape (n_obs, 2 or 3)."
+            )
+        coords = np.zeros((source.shape[0], 3), dtype=float)
+        coords[:, : source.shape[1]] = source
+        labels = np.asarray(adata.obs[self._alignment_section_key].astype(str))
+        transforms = params.get("transforms", {})
+
+        for label in np.unique(labels):
+            mask = labels == label
+            transform = transforms.get(str(label), {})
+            center = coords[mask, :2].mean(axis=0)
+            angle = np.deg2rad(float(transform.get("rotation", 0.0)))
+            scale = float(transform.get("scale", 1.0))
+            flip = np.array(
+                [
+                    -1.0 if transform.get("flip_x", False) else 1.0,
+                    -1.0 if transform.get("flip_y", False) else 1.0,
+                ]
+            )
+            rotation = np.array(
+                [[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]]
+            )
+            centered = (coords[mask, :2] - center) * flip
+            coords[mask, :2] = (
+                centered @ rotation.T * scale
+                + center
+                + np.array(
+                    [
+                        float(transform.get("translate_x", 0.0)),
+                        float(transform.get("translate_y", 0.0)),
+                    ]
+                )
+            )
+
+        spacing = params.get("z_spacing", {})
+        spacing_mode = spacing.get("mode", "multiplier")
+        spacing_value = float(spacing.get("value", 1.0))
+        section_centers = {
+            str(label): float(coords[labels == label, 2].mean())
+            for label in np.unique(labels)
+        }
+        global_center = float(coords[:, 2].mean())
+        fixed_centers = {}
+        if spacing_mode == "fixed":
+            ordered = sorted(
+                section_centers, key=lambda key: (section_centers[key], key)
+            )
+            middle = (len(ordered) - 1) / 2
+            fixed_centers = {
+                label: global_center + (index - middle) * spacing_value
+                for index, label in enumerate(ordered)
+            }
+        for label, section_center in section_centers.items():
+            mask = labels == label
+            target = (
+                fixed_centers[label]
+                if spacing_mode == "fixed"
+                else global_center + (section_center - global_center) * spacing_value
+            )
+            coords[mask, 2] += target - section_center
+
+        adata.obsm[output_key] = coords
+        return coords
 
     @property
     def selected_indices(self) -> list[int]:
@@ -161,6 +278,7 @@ class SpatialVistaWidget(anywidget.AnyWidget):
         "continuous_bins",
         "continuous_config",
         "global_config",
+        "alignment_transforms",
     )
     def _on_trait_change(self, change):
         """
@@ -196,7 +314,7 @@ class SpatialVistaWidget(anywidget.AnyWidget):
                 else:
                     count = len(new)
                 info = {"items": count}
-            elif name == "global_config":
+            elif name in ("global_config", "alignment_transforms"):
                 if new is None:
                     info = {}
                 else:

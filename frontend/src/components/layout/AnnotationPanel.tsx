@@ -88,7 +88,7 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
   };
 
   return (
-    <div className="bg-card border border-border  h-full rounded-md overflow-y-auto">
+    <div className="bg-card border border-border flex min-h-0 flex-1 flex-col overflow-y-auto rounded-md">
       <div className="sticky top-0 bg-card  py-2 px-2 border-b z-10 flex flex-row justify-between items-center border-b-border">
         <h3 className="text-sm font-semibold">Annotations</h3>
         <Button
