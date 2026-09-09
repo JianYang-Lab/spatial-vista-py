@@ -161,13 +161,9 @@ export const generateHistogramPositions = (
     categoryLogPs.get(category)!.push(logP);
   }
 
-  const minLogP = extData.numeric?.ContinuousConfig.Max
-    ? extData.numeric.ContinuousConfig.Min
-    : 0;
-  const maxLogP = extData.numeric?.ContinuousConfig.Max
-    ? extData.numeric.ContinuousConfig.Max
-    : 1;
-  const logPRange = maxLogP - minLogP;
+  const minLogP = extData.numeric?.ContinuousConfig.Min ?? 0;
+  const maxLogP = extData.numeric?.ContinuousConfig.Max ?? 1;
+  const logPRange = maxLogP - minLogP || 1;
 
   const numBins = 30;
   const binWidth = logPRange / numBins;

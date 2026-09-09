@@ -44,6 +44,8 @@ export type ContinuousConfig = {
   Source: string;
   Min: number;
   Max: number;
+  Label?: string;
+  Unit?: string;
 };
 
 export type ContinuousField = {

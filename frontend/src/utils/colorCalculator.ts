@@ -102,19 +102,15 @@ export const calculatePointColor = (
     const min = continuounsfield.ContinuousConfig.Min;
     const max = continuounsfield.ContinuousConfig.Max;
     const v = values[index];
+    if (!Number.isFinite(v)) return [0, 0, 0, 0];
 
     if (v < NumericThreshold) {
       return [0, 0, 0, 5];
     }
 
-    const t = (v - min) / (max - min + 1e-6);
+    const t = max === min ? 0.5 : (v - min) / (max - min);
     return applySelectionOpacity(
-      [
-        Math.floor(255 * t),
-        50,
-        Math.floor(255 * (1 - t)),
-        Math.floor(180 * t),
-      ],
+      [Math.floor(255 * t), 50, Math.floor(255 * (1 - t)), Math.floor(180 * t)],
       index,
       selectedPointIndices,
     );

@@ -21,6 +21,31 @@ The server listens at `http://127.0.0.1:8765` and opens a browser automatically.
 
 ## Data options
 
+When an option is omitted, both the CLI and Python `vis(adata)` use the same
+discovery rules:
+
+1. Explicit options take priority.
+2. A valid `uns["gsmap"]` declaration supplies gsMap-specific defaults.
+3. Otherwise, common spatial and section keys, categorical annotations and
+   real numeric `obs` columns are discovered automatically.
+
+Coordinate discovery recognizes `spatial`, `spatial_3d`, `spatial_aligned`,
+`spatial_algined`, `X_spatial`, `position` and `coordinates`, in that order.
+It does not interpret a UMAP as tissue coordinates. If no annotation is found,
+the viewer starts with one “All cells” category. High-cardinality free-text
+columns are not automatically used as annotations; numeric category codes should
+be made categorical or selected explicitly with `--annotations`.
+
+Use `--continuous ""` to disable automatic numeric fields, `--annotations ""`
+to disable additional annotations, or `--section ""` to disable section discovery.
+The Python equivalents are `continuous=[]`, `annotations=[]` and `section=""`.
+The default color annotation is retained when additional annotations are disabled.
+Gene expression is exported **only** when `--genes` / `genes=` is supplied.
+
+For gsMap files, see [Query gsMap traits](gsmap.md). Invalid gsMap metadata
+raises an error before serving the viewer. Use `--ignore-gsmap-metadata` only
+to deliberately open that file as ordinary AnnData; it disables gsMap trait mode.
+
 SpatialVista recognizes common coordinate keys such as `spatial` and common annotation keys such as `celltype`, `annotation`, or `leiden`. For reproducible commands, set them explicitly:
 
 ```bash

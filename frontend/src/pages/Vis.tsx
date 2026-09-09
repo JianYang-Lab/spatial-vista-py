@@ -143,6 +143,9 @@ export default function Vis({
   >({});
 
   const [activeContinuous, setActiveContinuous] = useState<string | null>(null);
+  const [continuousQuery, setContinuousQuery] = useState<"all" | "traits">(
+    "all",
+  );
   const [lassoEnabled, setLassoEnabled] = useState(false);
   const [selectedCellIndices, setSelectedCellIndices] = useState<number[]>([]);
   const [selectionVersion, setSelectionVersion] = useState(0);
@@ -204,94 +207,112 @@ export default function Vis({
   useEffect(() => {
     if (!model) return;
 
-    const configMap: Record<string, ContinuousConfig> =
-      model.get("continuous_config");
-    const bins = model.get("continuous_bins");
+    const refresh = () => {
+      const configMap: Record<string, ContinuousConfig> =
+        model.get("continuous_config");
+      const bins = model.get("continuous_bins");
 
-    if (!configMap || !bins) return;
+      if (!configMap || !bins) return;
 
-    const parsed: Record<string, ContinuousField> = {};
+      const parsed: Record<string, ContinuousField> = {};
 
-    for (const [name, config] of Object.entries(configMap) as [
-      string,
-      ContinuousConfig,
-    ][]) {
-      const dv = bins[name] as DataView | undefined;
-      if (!dv) continue;
+      for (const [name, config] of Object.entries(configMap) as [
+        string,
+        ContinuousConfig,
+      ][]) {
+        const dv = bins[name] as DataView | undefined;
+        if (!dv) continue;
 
-      const raw = parseContinuousArray(dv, config.DType);
+        const raw = parseContinuousArray(dv, config.DType);
 
-      const values =
-        config.DType === "float16" ? decodeFloat16(raw as Uint16Array) : raw;
+        const values =
+          config.DType === "float16" ? decodeFloat16(raw as Uint16Array) : raw;
 
-      parsed[name] = {
-        name,
-        values,
-        ContinuousConfig: config,
-      };
-    }
+        parsed[name] = {
+          name,
+          values,
+          ContinuousConfig: config,
+        };
+      }
 
-    setContinuousFields(parsed);
+      setContinuousFields(parsed);
+    };
+    model.on("change:continuous_config", refresh);
+    model.on("change:continuous_bins", refresh);
+    refresh();
+    return () => {
+      model.off("change:continuous_config", refresh);
+      model.off("change:continuous_bins", refresh);
+    };
   }, [model]);
 
   useEffect(() => {
     if (!model) return;
 
-    const config = model.get("annotation_config");
-    const bins = model.get("annotation_bins");
+    const refresh = () => {
+      const config = model.get("annotation_config");
+      const bins = model.get("annotation_bins");
 
-    if (!config || !bins) return;
+      if (!config || !bins) return;
 
-    const parsedBins: Record<string, Uint8Array | Uint16Array | Uint32Array> =
-      {};
+      const parsedBins: Record<string, Uint8Array | Uint16Array | Uint32Array> =
+        {};
 
-    for (const anno of config.AvailableAnnoTypes) {
-      const dv = bins[anno] as DataView | undefined;
-      if (!dv) continue;
+      for (const anno of config.AvailableAnnoTypes) {
+        const dv = bins[anno] as DataView | undefined;
+        if (!dv) continue;
 
-      const dtype = config.AnnoDtypes?.[anno];
+        const dtype = config.AnnoDtypes?.[anno];
 
-      if (!dtype) {
-        console.warn(
-          `[SpatialVista] Missing AnnoDtypes for annotation "${anno}", skip.`,
-        );
-        continue;
+        if (!dtype) {
+          console.warn(
+            `[SpatialVista] Missing AnnoDtypes for annotation "${anno}", skip.`,
+          );
+          continue;
+        }
+
+        switch (dtype) {
+          case "uint8":
+            parsedBins[anno] = new Uint8Array(
+              dv.buffer,
+              dv.byteOffset,
+              dv.byteLength,
+            );
+            break;
+
+          case "uint16":
+            parsedBins[anno] = new Uint16Array(
+              dv.buffer,
+              dv.byteOffset,
+              dv.byteLength / 2,
+            );
+            break;
+
+          case "uint32":
+            parsedBins[anno] = new Uint32Array(
+              dv.buffer,
+              dv.byteOffset,
+              dv.byteLength / 4,
+            );
+            break;
+
+          default:
+            console.error(
+              `[SpatialVista] Unsupported annotation dtype "${dtype}" for "${anno}"`,
+            );
+        }
       }
 
-      switch (dtype) {
-        case "uint8":
-          parsedBins[anno] = new Uint8Array(
-            dv.buffer,
-            dv.byteOffset,
-            dv.byteLength,
-          );
-          break;
-
-        case "uint16":
-          parsedBins[anno] = new Uint16Array(
-            dv.buffer,
-            dv.byteOffset,
-            dv.byteLength / 2,
-          );
-          break;
-
-        case "uint32":
-          parsedBins[anno] = new Uint32Array(
-            dv.buffer,
-            dv.byteOffset,
-            dv.byteLength / 4,
-          );
-          break;
-
-        default:
-          console.error(
-            `[SpatialVista] Unsupported annotation dtype "${dtype}" for "${anno}"`,
-          );
-      }
-    }
-
-    setAnnotationConfig(config);
-    setAnnotationBins(parsedBins);
+      setAnnotationConfig(config);
+      setAnnotationBins(parsedBins);
+    };
+    model.on("change:annotation_config", refresh);
+    model.on("change:annotation_bins", refresh);
+    refresh();
+    return () => {
+      model.off("change:annotation_config", refresh);
+      model.off("change:annotation_bins", refresh);
+    };
   }, [model]);
 
   useEffect(() => {
@@ -838,6 +859,10 @@ export default function Vis({
     numericField !== null
       ? [numericField.ContinuousConfig.Min, numericField.ContinuousConfig.Max]
       : null;
+  const numericConfig = numericField?.ContinuousConfig;
+  const numericLabel = numericField
+    ? `${numericConfig?.Label ?? numericField.name}${numericConfig?.Unit ? ` · ${numericConfig.Unit}` : ""}`
+    : null;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -849,7 +874,17 @@ export default function Vis({
         lassoEnabled={lassoEnabled}
         canLasso={canLasso}
         selectedCount={selectedCellIndices.length}
-        onContinuousOpen={() => uiStates.setContinuousOpen(true)}
+        hasTraits={Object.values(continuousFields).some(
+          (field) => field.ContinuousConfig.Source === "gsmap",
+        )}
+        onTraitsOpen={() => {
+          setContinuousQuery("traits");
+          uiStates.setContinuousOpen(true);
+        }}
+        onContinuousOpen={() => {
+          setContinuousQuery("all");
+          uiStates.setContinuousOpen(true);
+        }}
         onToggleView={toggleDeckGLDisplay}
         onCapture={captureCurrentImage}
         onLassoToggle={handleLassoToggle}
@@ -867,7 +902,7 @@ export default function Vis({
             hiddenCategoryIds={annotationStates.hiddenCategoryIds}
             categoryColors={annotationStates.categoryColors}
             customColors={annotationStates.customColors}
-            currentNumericName={activeContinuous}
+            currentNumericName={numericLabel}
             isLoaded={isLoaded}
             onColorPickerOpen={() => uiStates.setColorPickerOpen(true)}
             onSetAnnotationForColoring={
@@ -987,7 +1022,7 @@ export default function Vis({
               viewStates.layoutMode === "3d"
             }
             isLoaded={isLoaded}
-            currentTrait={activeContinuous}
+            currentTrait={numericLabel}
             coloringAnnotation={annotationStates.coloringAnnotation}
             selectedCategories={annotationStates.selectedCategories}
             onZoomChange={viewStates.setActiveZoom}
@@ -1021,6 +1056,7 @@ export default function Vis({
 
       {/* Dialogs */}
       <ContinuousSelectionDialog
+        kind={continuousQuery}
         open={uiStates.continuousOpen} // 可以之后改名
         activeContinuous={activeContinuous}
         continuousFields={continuousFields}

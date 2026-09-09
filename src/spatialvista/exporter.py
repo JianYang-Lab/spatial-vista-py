@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ._logger import logger
+from .discovery import numeric_values
 
 
 def _now():
@@ -24,9 +25,7 @@ def write_bin(array, path):
         size = path.stat().st_size
     except Exception:
         size = None
-    logger.info(
-        "write_bin: wrote {} bytes to {} in {:.3f}", size, path, duration
-    )
+    logger.info("write_bin: wrote {} bytes to {} in {:.3f}", size, path, duration)
 
 
 def name_to_rgb(name: str) -> tuple[int, int, int]:
@@ -66,16 +65,10 @@ def write_laz(adata, position_key, path, mode: str = "3D"):
 
     # Handle 2D coordinates: add z dimension if needed
     if coords.shape[1] == 2:
-        logger.debug(
-            f"Adding z dimension for 2D coordinates (shape={coords.shape})"
-        )
-        coords = np.hstack(
-            (coords, np.zeros((coords.shape[0], 1), dtype=np.float64))
-        )
+        logger.debug(f"Adding z dimension for 2D coordinates (shape={coords.shape})")
+        coords = np.hstack((coords, np.zeros((coords.shape[0], 1), dtype=np.float64)))
     elif coords.shape[1] != 3:
-        raise ValueError(
-            f"Expected 2 or 3 spatial dimensions, got {coords.shape[1]}"
-        )
+        raise ValueError(f"Expected 2 or 3 spatial dimensions, got {coords.shape[1]}")
 
     x = coords[:, 0].astype(np.float64)
     y = coords[:, 1].astype(np.float64)
@@ -155,15 +148,15 @@ def export_annotations_blob(
         annotations = []
     if slice_key is not None:
         annotations = [slice_key] + annotations
-    all_annos = list(dict.fromkeys([color_key] + annotations))
+    all_annos = list(
+        dict.fromkeys(([color_key] if color_key is not None else []) + annotations)
+    )
 
     logger.info(
         "export_annotations_blob: starting export for region_key={}, annotations={}, n_obs={}",
         color_key,
         annotations,
-        getattr(adata, "n_obs", len(adata.obs))
-        if hasattr(adata, "obs")
-        else None,
+        getattr(adata, "n_obs", len(adata.obs)) if hasattr(adata, "obs") else None,
     )
 
     anno_maps = {}
@@ -176,10 +169,13 @@ def export_annotations_blob(
             raise KeyError(f"Annotation '{anno}' not found in adata.obs")
 
         col = adata.obs[anno]
+        if col.isna().any():
+            # Missing category codes (-1) must not wrap to uint8(255).
+            col = col.astype("string").fillna("Unknown").astype("category")
 
         # Fast path: if already categorical, use .cat.codes (no factorization cost)
         try:
-            if pd.api.types.is_categorical_dtype(col.dtype):
+            if isinstance(col.dtype, pd.CategoricalDtype):
                 # categorical: reuse codes and categories directly (no sorting/copy if possible)
                 cats = np.asarray(col.cat.categories)
                 codes = col.cat.codes.to_numpy()
@@ -232,6 +228,16 @@ def export_annotations_blob(
             duration,
         )
 
+    if color_key is None:
+        color_key = "__spatialvista_all__"
+        while color_key in adata.obs:
+            color_key += "_"
+        all_annos.insert(0, color_key)
+        anno_bins[color_key] = np.zeros(len(adata.obs), dtype=np.uint8).tobytes()
+        anno_dtypes[color_key] = "uint8"
+        anno_maps[color_key] = {
+            "Items": [{"Name": "All cells", "Code": 0, "Color": [125, 165, 190]}]
+        }
     config = {
         "Id": str(uuid.uuid4()),
         "AvailableAnnoTypes": all_annos,
@@ -254,6 +260,8 @@ def export_annotations_blob(
 def export_continuous_obs_blob(
     adata,
     keys: list[str],
+    *,
+    trait_labels: dict[str, str] | None = None,
 ):
     """
     Returns:
@@ -267,9 +275,7 @@ def export_continuous_obs_blob(
     logger.info(
         "export_continuous_obs_blob: starting export for keys={} n_obs={}",
         keys,
-        getattr(adata, "n_obs", len(adata.obs))
-        if hasattr(adata, "obs")
-        else None,
+        getattr(adata, "n_obs", len(adata.obs)) if hasattr(adata, "obs") else None,
     )
 
     for key in keys:
@@ -277,11 +283,13 @@ def export_continuous_obs_blob(
         if key not in adata.obs:
             raise KeyError(f"Continuous obs '{key}' not found in adata.obs")
 
-        vec = adata.obs[key].to_numpy()
-
-        if not np.issubdtype(vec.dtype, np.number):
-            raise TypeError(f"Obs '{key}' is not numeric")
-
+        vec = numeric_values(adata.obs[key], f"Obs {key!r}")
+        if np.isinf(vec).any() or not np.isfinite(vec).any():
+            raise ValueError(
+                f"Obs {key!r} must contain finite values or NaN, with at least one finite value"
+            )
+        if np.nanmax(np.abs(vec)) > np.finfo(np.float32).max:
+            raise ValueError(f"Obs {key!r} exceeds float32 display range")
         vec = vec.astype(np.float32)
         bins[key] = vec.tobytes()
 
@@ -291,6 +299,10 @@ def export_continuous_obs_blob(
             "Min": float(np.nanmin(vec)),
             "Max": float(np.nanmax(vec)),
         }
+        if trait_labels and key in trait_labels:
+            traits[key].update(
+                Source="gsmap", Label=trait_labels[key], Unit="−log10(P)"
+            )
         duration = _now() - start
         logger.info(
             "export_continuous_obs_blob: key={} dtype={} bytes={} min={} max={} took {:.3f}",

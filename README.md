@@ -75,7 +75,8 @@ uvx spatialvista --input data.h5ad
 
 #### Command-line usage
 
-The shortest command automatically detects a common spatial coordinate key and categorical annotation:
+The shortest command automatically detects spatial coordinates, categorical annotations,
+section identifiers and numeric observation fields:
 
 ```bash
 spatialvista --input data.h5ad
@@ -95,6 +96,11 @@ spatialvista --input data.h5ad \
 
 Use `spatialvista --help` for options including `--host`, `--port`, `--mode`, `--layer`, and `--no-browser`. The default host is loopback-only, so data is not exposed to other machines.
 
+Files with validated `uns["gsmap"]` metadata also get a dedicated **Query Traits**
+button with searchable trait labels and −log10(P) coloring. See the
+[gsMap integration guide](docs/gsmap.md) for the export schema and installation
+of this feature branch. A column prefix alone does not enable gsMap mode.
+
 #### Jupyter usage
 
 Launch your jupyter notebook or jupyter lab. And play with SpatialVista!
@@ -105,20 +111,18 @@ jupyter-lab
 
 ```python
 import spatialvista as spv
+import anndata as ad
 import numpy as np
+import pandas as pd
 
 # Create minimal test data
-class FakeAnnData:
-    def __init__(self, n: int):
-        self.obsm = {"spatial": np.random.rand(n, 3)}
-        self.obs = {"celltype": np.random.choice(["A", "B", "C"], n)}
-        self.var_names = []
-        self.X = None
-        self.n_obs = n
-adata = FakeAnnData(n=10_000)
+adata = ad.AnnData(
+    obs=pd.DataFrame({"celltype": pd.Categorical(np.random.choice(["A", "B", "C"], 10_000))}),
+    obsm={"spatial": np.random.rand(10_000, 3)},
+)
 
 # Create visualization
-spv.vis(adata, position="spatial", color="celltype")
+spv.vis(adata)
 
 
 import scanpy as sc

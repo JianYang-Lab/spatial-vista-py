@@ -114,8 +114,8 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
               disabled={!isLoaded}
               defaultOpen={coloringAnnotation === type}
             >
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-1 text-left">
-                <div className="flex items-center">
+              <div className="flex items-center gap-1 p-1">
+                <CollapsibleTrigger className="flex flex-1 items-center justify-between text-left">
                   <span
                     className={`text-sm ${
                       coloringAnnotation === type
@@ -125,26 +125,24 @@ export const AnnotationPanel: React.FC<AnnotationPanelProps> = ({
                   >
                     {type}
                   </span>
-                </div>
-
-                <div className="flex items-center space-x-1">
-                  {coloringAnnotation !== type && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSetAnnotationForColoring(type);
-                      }}
-                    >
-                      <PaintBucketIcon className="h-4 w-4" />
-                    </Button>
-                  )}
-
                   <ChevronsDownIcon className="h-4 w-4" />
-                </div>
-              </CollapsibleTrigger>
+                </CollapsibleTrigger>
+                {coloringAnnotation !== type && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-6 w-6 p-0"
+                    aria-label={`Color by ${type}`}
+                    disabled={!isLoaded}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSetAnnotationForColoring(type);
+                    }}
+                  >
+                    <PaintBucketIcon className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
 
               <CollapsibleContent className="p-0 border-t">
                 <CategoryList

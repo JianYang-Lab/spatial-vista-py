@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 
 from spatialvista.cli import (
-    _infer_color,
-    _infer_position,
     _make_handler,
     _split_values,
 )
+from spatialvista.discovery import infer_color, infer_position
 
 
 class FakeAnnData:
@@ -23,8 +22,8 @@ class FakeAnnData:
 def test_cli_value_and_key_inference():
     adata = FakeAnnData()
     assert _split_values(["a,b", "c"]) == ["a", "b", "c"]
-    assert _infer_position(adata) == "spatial"
-    assert _infer_color(adata) == "celltype"
+    assert infer_position(adata) == "spatial"
+    assert infer_color(adata) == "celltype"
 
 
 def test_server_serves_manifest_and_binary():

@@ -1,8 +1,9 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Optional
+from typing import Any
 
 from ._logger import logger
+from .discovery import resolve_fields
 from .exporter import (
     export_annotations_blob,
     export_continuous_gene_blob,
@@ -72,24 +73,23 @@ def _async_set_trait_and_send(
             dur,
         )
     except Exception as e:
-        logger.exception(
-            "async_send: failed to send trait='{}': {}", trait_name, e
-        )
+        logger.exception("async_send: failed to send trait='{}': {}", trait_name, e)
 
 
 def vis(
     adata,
-    position: str,
-    color: str,
-    section: Optional[str] = None,
-    annotations: Optional[list[str]] = None,
-    continuous: Optional[list[str]] = None,
-    genes: Optional[list[str]] = None,
-    layer: Optional[str] = None,
+    position: str | None = None,
+    color: str | None = None,
+    section: str | None = None,
+    annotations: list[str] | None = None,
+    continuous: list[str] | None = None,
+    genes: list[str] | None = None,
+    layer: str | None = None,
     height: int = 600,
     mode: str = "3D",
     _async_workers: int = 2,
     _wait_for_all_sends: bool = False,
+    ignore_gsmap_metadata: bool = False,
 ) -> SpatialVistaWidget:
     """
     Create and return a SpatialVista visualization widget.
@@ -101,17 +101,17 @@ def vis(
     ----------
     adata : AnnData
         Annotated data object containing spatial information.
-    position : str
-        Key in adata.obsm containing spatial coordinates.
-    color : str
-        Key in adata.obs for default categorical coloring.
+    position : str, optional
+        Coordinate key in adata.obsm. Infer from gsMap metadata or common spatial keys.
+    color : str, optional
+        Default categorical obs key. Infer from metadata or common annotations.
     section : str, optional
         Annotation key for section slicing (only relevant when mode="3D" and switching to 2D slice view in UI).
-        Ignored when mode="2D".
+        Inferred when omitted; use "" to disable. Ignored when mode="2D".
     annotations : list[str], optional
-        List of additional categorical annotation keys to export.
+        Additional categorical keys. Infer when omitted; [] disables extras.
     continuous : list[str], optional
-        List of continuous observation keys to export.
+        Numeric observation keys. Infer when omitted; [] disables numeric fields.
     genes : list[str], optional
         List of gene names to export.
     layer : str, optional
@@ -124,6 +124,8 @@ def vis(
         Number of background workers for async trait sends.
     _wait_for_all_sends : bool, default False
         Whether to wait for all background sends to complete before returning.
+    ignore_gsmap_metadata : bool, default False
+        Ignore uns["gsmap"] and treat the input as an ordinary AnnData.
 
     Returns
     -------
@@ -146,8 +148,20 @@ def vis(
 
     validate_mode(mode)
     validate_height(height)
+    fields = resolve_fields(
+        adata,
+        position=position,
+        color=color,
+        section=section,
+        annotations=annotations,
+        continuous=continuous,
+        ignore_gsmap=ignore_gsmap_metadata,
+    )
+    position, color, section = fields.position, fields.color, fields.section
+    annotations, continuous = fields.annotations, fields.continuous
     validate_adata_key(adata, position, "obsm")
-    validate_adata_key(adata, color, "obs")
+    if color is not None:
+        validate_adata_key(adata, color, "obs")
 
     if section is not None:
         validate_adata_key(adata, section, "obs")
@@ -193,12 +207,11 @@ def vis(
             "Mode": mode,
             # if mode is "2D", slice_key is not relevant; frontend can check Mode
             "SliceKey": section if mode == "3D" else None,
+            "GsMap": fields.gsmap is not None,
         }
     }
     futures.append(
-        executor.submit(
-            _async_set_trait_and_send, w, "global_config", global_cfg
-        )
+        executor.submit(_async_set_trait_and_send, w, "global_config", global_cfg)
     )
     logger.info("vis: dispatched async send for global_config: {}", global_cfg)
 
@@ -216,9 +229,7 @@ def vis(
     futures.append(
         executor.submit(_async_set_trait_and_send, w, "laz_bytes", laz_bytes)
     )
-    logger.info(
-        "vis: dispatched async send for laz_bytes ({} bytes)", len(laz_bytes)
-    )
+    logger.info("vis: dispatched async send for laz_bytes ({} bytes)", len(laz_bytes))
 
     # --- categorical annotations ---
     t0 = _now()
@@ -229,9 +240,7 @@ def vis(
         annotations,
     )
     t_ann = _now() - t0
-    total_anno_bytes = (
-        sum(len(b) for b in anno_bins.values()) if anno_bins else 0
-    )
+    total_anno_bytes = sum(len(b) for b in anno_bins.values()) if anno_bins else 0
     logger.info(
         "vis: export_annotations_blob produced {} bins total_bytes={} in {:.3f}s",
         len(anno_bins),
@@ -241,14 +250,10 @@ def vis(
 
     # dispatch annotation config and bins asynchronously
     futures.append(
-        executor.submit(
-            _async_set_trait_and_send, w, "annotation_config", anno_config
-        )
+        executor.submit(_async_set_trait_and_send, w, "annotation_config", anno_config)
     )
     futures.append(
-        executor.submit(
-            _async_set_trait_and_send, w, "annotation_bins", anno_bins
-        )
+        executor.submit(_async_set_trait_and_send, w, "annotation_bins", anno_bins)
     )
     logger.info(
         "vis: dispatched async send for annotation_config and annotation_bins ({} bytes)",
@@ -264,11 +269,10 @@ def vis(
         cont_traits, cont_bins = export_continuous_obs_blob(
             adata,
             continuous,
+            trait_labels=(fields.gsmap or {}).get("traits"),
         )
         t_cont = _now() - t0
-        cont_obs_bytes = (
-            sum(len(b) for b in cont_bins.values()) if cont_bins else 0
-        )
+        cont_obs_bytes = sum(len(b) for b in cont_bins.values()) if cont_bins else 0
         logger.info(
             "vis: export_continuous_obs_blob produced {} bins total_bytes={} in {:.3f}s",
             len(cont_bins),
@@ -283,9 +287,7 @@ def vis(
             )
         )
         futures.append(
-            executor.submit(
-                _async_set_trait_and_send, w, "continuous_bins", cont_bins
-            )
+            executor.submit(_async_set_trait_and_send, w, "continuous_bins", cont_bins)
         )
         logger.info(
             "vis: dispatched async send for continuous_config and continuous_bins ({} bytes)",
@@ -296,9 +298,7 @@ def vis(
     gene_bytes = 0
     if genes:
         t0 = _now()
-        gene_traits, gene_bins = export_continuous_gene_blob(
-            adata, genes, layer=layer
-        )
+        gene_traits, gene_bins = export_continuous_gene_blob(adata, genes, layer=layer)
         t_genes = _now() - t0
         cont_traits.update(gene_traits)
         cont_bins.update(gene_bins)
@@ -316,9 +316,7 @@ def vis(
             )
         )
         futures.append(
-            executor.submit(
-                _async_set_trait_and_send, w, "continuous_bins", cont_bins
-            )
+            executor.submit(_async_set_trait_and_send, w, "continuous_bins", cont_bins)
         )
         logger.info(
             "vis: dispatched async send for updated continuous_config/continuous_bins ({} bytes)",
@@ -342,9 +340,7 @@ def vis(
     executor.shutdown(wait=False)
 
     total_time = _now() - start_total
-    total_bytes = (
-        len(laz_bytes) + total_anno_bytes + cont_obs_bytes + gene_bytes
-    )
+    total_bytes = len(laz_bytes) + total_anno_bytes + cont_obs_bytes + gene_bytes
     logger.info(
         "vis: finished (dispatch phase) total_bytes={} total_time={:.3f}s background_tasks={}",
         total_bytes,
