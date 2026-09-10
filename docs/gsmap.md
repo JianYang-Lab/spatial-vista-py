@@ -11,26 +11,30 @@ trait list; selecting a trait colors the tissue by **−log10(P)**. Annotation
 selection and section controls remain available. Ordinary numeric fields remain
 under **Query Continuous**.
 
-## Install this feature
+## Export from gsMap
 
-These additions are on the fork's feature branch, not yet in the PyPI release:
-
-```bash
-pip install "git+https://github.com/Ganten-Hornby/spatial-vista-py.git@feature/gsmap-trait-discovery"
-```
-
-With the gsMap exporter installed, export an existing completed 3D report:
+In gsMap versions supporting SpatialVista report output, the report step
+automatically writes `<project_name>.spatialvista.h5ad`
+for `spatial3D` datasets. No separate gsMap export command is needed. For the
+E11.5 tutorial:
 
 ```bash
-gsmap export-spatialvista /path/to/gsmap_project --output embryo.spatialvista.h5ad
-spatialvista --input embryo.spatialvista.h5ad
+spatialvista --input results/e11-ordinal/e11-ordinal.spatialvista.h5ad
 ```
 
-Use repeated `--trait IQ --trait AF` options to select traits, or `--max-spots 200000`
-for a reproducible preview. The export includes all spots by default, independently
-of HTML report sampling, and does not rerun association analysis. It contains
-coordinates, annotations and association values, not expression or marker matrices.
-Future gsMap report runs can request it with `--export-spatialvista`.
+The file includes the report's traits and annotations, with all result spots by
+default, independently of HTML report sampling. It contains coordinates,
+annotations and association values, not expression or marker matrices.
+gsMap prints both viewer commands at report completion.
+
+For a reproducible preview, add `--spatialvista-max-spots 20000` to gsMap's
+quick-mode command, or `spatialvista_max_spots=20000` to `QuickModeConfig`.
+To opt out, use `--no-export-spatialvista` / `export_spatialvista=False`.
+Spatial2D and scRNA reports do not generate this file.
+
+For an existing project, use the same gsMap configuration with
+`--start-step report` / `start_step="report"`. This runs report generation
+without repeating embedding, marker-score or LDSC analysis.
 
 In a notebook:
 
@@ -46,6 +50,11 @@ spv.vis(adata, continuous=trait_columns[:1])
 ```
 
 ## H5AD metadata contract
+
+Ordinary annotations and numeric fields follow the
+[AnnData conventions](cli.md#anndata-conventions). The gsMap declaration adds
+trait labels and score semantics; it does not require a particular column prefix
+or an expression matrix.
 
 Other exporters can use this versioned declaration. Trait column names are
 arbitrary; discovery uses the mapping, **not a prefix**:

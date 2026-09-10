@@ -29,6 +29,33 @@ discovery rules:
 3. Otherwise, common spatial and section keys, categorical annotations and
    real numeric `obs` columns are discovered automatically.
 
+### AnnData conventions
+
+| Data | Location and convention | Viewer |
+| --- | --- | --- |
+| Tissue coordinates | `obsm["spatial"]`: finite numeric array of shape `(n_obs, 2)` or `(n_obs, 3)` | Spatial map |
+| Annotations | `obs`: categorical or boolean columns; string columns with a limited number of distinct labels | Annotation selection |
+| Continuous measurements | `obs`: real integer or floating-point columns with at least one finite value, excluding selected annotations, the color field and section identifiers | Query Continuous |
+| Section identifiers | `obs["sample_name"]` or another recognized section key | Section controls |
+| gsMap associations | Numeric `obs` columns explicitly declared in `uns["gsmap"]["traits"]`; values are already −log10(P) | Query Traits |
+
+All arrays and columns must refer to the same cells in the same `obs` row order.
+An expression matrix is optional for coordinates, annotations and continuous
+fields. Numeric-looking strings are not automatically converted to measurements.
+For numeric cell-type codes, set the intended type before saving:
+
+```python
+adata.obs["celltype"] = adata.obs["celltype"].astype("category")
+adata.obs["score"] = adata.obs["score"].astype("float32")
+adata.write_h5ad("sample.h5ad")
+```
+
+Automatic string annotations require at most
+`min(1000, max(20, n_obs // 5))` distinct nonmissing labels. Explicit categorical
+columns do not use this threshold. Missing annotation labels become “Unknown”;
+missing numeric values remain NaN and render transparently. Infinite numeric
+values are rejected when exported to the viewer.
+
 Coordinate discovery recognizes `spatial`, `spatial_3d`, `spatial_aligned`,
 `spatial_algined`, `X_spatial`, `position` and `coordinates`, in that order.
 It does not interpret a UMAP as tissue coordinates. If no annotation is found,
