@@ -43,6 +43,13 @@ export const ContinuousSelectionDialog: React.FC<
   const traitFields = Object.values(continuousFields).filter(
     (f) => f.ContinuousConfig.Source === "gsmap",
   );
+  // Search traits by their label only: the hashed column names would make
+  // fuzzy search match unrelated traits. Keep item values unique.
+  const otherNames = new Set(
+    [...obsFields, ...geneFields].map((field) => field.name),
+  );
+  const traitValue = (label: string) =>
+    otherNames.has(label) ? `${label} (gsMap)` : label;
 
   return (
     <CommandDialog
@@ -62,7 +69,9 @@ export const ContinuousSelectionDialog: React.FC<
         <CommandEmpty>
           <div className="flex items-center flex-col text-center py-4">
             <FrownIcon className="h-4 w-4" />
-            <span>No numeric fields found</span>
+            <span>
+              No {kind === "traits" ? "gsMap traits" : "numeric fields"} found
+            </span>
           </div>
         </CommandEmpty>
 
@@ -97,8 +106,7 @@ export const ContinuousSelectionDialog: React.FC<
               return (
                 <CommandItem
                   key={field.name}
-                  value={field.name}
-                  keywords={[label, "gsMap", "trait"]}
+                  value={traitValue(label)}
                   onSelect={() => {
                     onSelectContinuous(isActive ? null : field.name);
                     onOpenChange(false);

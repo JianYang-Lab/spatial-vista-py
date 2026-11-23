@@ -66648,12 +66648,14 @@ const w$ = ({
   onSelectContinuous: s
 }) => {
   const r = Object.values(C).filter(
-    (f) => f.ContinuousConfig.Source === "gene"
+    (M) => M.ContinuousConfig.Source === "gene"
   ), l = Object.values(C).filter(
-    (f) => f.ContinuousConfig.Source === "obs"
+    (M) => M.ContinuousConfig.Source === "obs"
   ), d = Object.values(C).filter(
-    (f) => f.ContinuousConfig.Source === "gsmap"
-  );
+    (M) => M.ContinuousConfig.Source === "gsmap"
+  ), f = new Set(
+    [...l, ...r].map((M) => M.name)
+  ), D = (M) => f.has(M) ? `${M} (gsMap)` : M;
   return /* @__PURE__ */ T.jsxs(
     f$,
     {
@@ -66671,7 +66673,11 @@ const w$ = ({
         /* @__PURE__ */ T.jsxs(y$, { children: [
           /* @__PURE__ */ T.jsx(D$, { children: /* @__PURE__ */ T.jsxs("div", { className: "flex items-center flex-col text-center py-4", children: [
             /* @__PURE__ */ T.jsx(Oz, { className: "h-4 w-4" }),
-            /* @__PURE__ */ T.jsx("span", { children: "No numeric fields found" })
+            /* @__PURE__ */ T.jsxs("span", { children: [
+              "No ",
+              g === "traits" ? "gsMap traits" : "numeric fields",
+              " found"
+            ] })
           ] }) }),
           I && /* @__PURE__ */ T.jsxs(T.Fragment, { children: [
             /* @__PURE__ */ T.jsx(eB, { heading: "Current Selection", children: /* @__PURE__ */ T.jsxs(
@@ -66692,95 +66698,94 @@ const w$ = ({
             ) }),
             /* @__PURE__ */ T.jsx(M$, {})
           ] }),
-          d.length > 0 && /* @__PURE__ */ T.jsx(eB, { heading: "gsMap Traits · −log10(P)", children: d.map((f) => {
-            const D = f.ContinuousConfig, M = D.Label ?? f.name, B = I === f.name;
+          d.length > 0 && /* @__PURE__ */ T.jsx(eB, { heading: "gsMap Traits · −log10(P)", children: d.map((M) => {
+            const B = M.ContinuousConfig, m = B.Label ?? M.name, S = I === M.name;
             return /* @__PURE__ */ T.jsxs(
               tB,
               {
-                value: f.name,
-                keywords: [M, "gsMap", "trait"],
+                value: D(m),
                 onSelect: () => {
-                  s(B ? null : f.name), t(!1);
+                  s(S ? null : M.name), t(!1);
                 },
-                className: B ? "bg-primary/10 font-medium" : "",
+                className: S ? "bg-primary/10 font-medium" : "",
                 children: [
-                  B && /* @__PURE__ */ T.jsx(Lb, { className: "mr-2 h-4 w-4 text-green-500" }),
+                  S && /* @__PURE__ */ T.jsx(Lb, { className: "mr-2 h-4 w-4 text-green-500" }),
                   /* @__PURE__ */ T.jsxs("div", { className: "flex flex-col flex-1", children: [
-                    /* @__PURE__ */ T.jsx("span", { children: M }),
+                    /* @__PURE__ */ T.jsx("span", { children: m }),
                     /* @__PURE__ */ T.jsxs("span", { className: "text-xs text-muted-foreground", children: [
-                      D.Unit,
+                      B.Unit,
                       " · [",
-                      D.Min.toFixed(2),
+                      B.Min.toFixed(2),
                       ",",
                       " ",
-                      D.Max.toFixed(2),
+                      B.Max.toFixed(2),
                       "]"
                     ] })
                   ] })
                 ]
               },
-              f.name
+              M.name
             );
           }) }),
           g !== "traits" && /* @__PURE__ */ T.jsxs(T.Fragment, { children: [
-            /* @__PURE__ */ T.jsx(eB, { heading: "Continuous Fields", children: l.map((f) => {
-              const D = I === f.name;
+            /* @__PURE__ */ T.jsx(eB, { heading: "Continuous Fields", children: l.map((M) => {
+              const B = I === M.name;
               return /* @__PURE__ */ T.jsxs(
                 tB,
                 {
-                  value: f.name,
-                  keywords: [f.name, f.ContinuousConfig.Source],
+                  value: M.name,
+                  keywords: [M.name, M.ContinuousConfig.Source],
                   onSelect: () => {
-                    s(D ? null : f.name), t(!1);
+                    s(B ? null : M.name), t(!1);
                   },
-                  className: D ? "bg-primary/10 font-medium" : "",
+                  className: B ? "bg-primary/10 font-medium" : "",
                   children: [
-                    D && /* @__PURE__ */ T.jsx("span", { className: "mr-2 text-green-400", children: /* @__PURE__ */ T.jsx(Lb, { className: "h-4 w-4" }) }),
+                    B && /* @__PURE__ */ T.jsx("span", { className: "mr-2 text-green-400", children: /* @__PURE__ */ T.jsx(Lb, { className: "h-4 w-4" }) }),
                     /* @__PURE__ */ T.jsxs("div", { className: "flex flex-col flex-1", children: [
-                      /* @__PURE__ */ T.jsx("span", { children: f.name }),
+                      /* @__PURE__ */ T.jsx("span", { children: M.name }),
                       /* @__PURE__ */ T.jsxs("span", { className: "text-xs text-muted-foreground", children: [
-                        f.ContinuousConfig.Source,
+                        M.ContinuousConfig.Source,
                         " · [",
-                        f.ContinuousConfig.Min.toFixed(2),
+                        M.ContinuousConfig.Min.toFixed(2),
                         ",",
                         " ",
-                        f.ContinuousConfig.Max.toFixed(2),
+                        M.ContinuousConfig.Max.toFixed(2),
                         "]"
                       ] })
                     ] })
                   ]
                 },
-                f.name
+                M.name
               );
             }) }),
-            /* @__PURE__ */ T.jsx(eB, { heading: "Gene Expression", children: r.map((f) => {
-              const D = I === f.name;
+            /* @__PURE__ */ T.jsx(eB, { heading: "Gene Expression", children: r.map((M) => {
+              const B = I === M.name;
               return /* @__PURE__ */ T.jsxs(
                 tB,
                 {
-                  value: f.name,
-                  keywords: [f.name, f.ContinuousConfig.Source],
+                  value: M.name,
+                  keywords: [M.name, M.ContinuousConfig.Source],
                   onSelect: () => {
-                    s(D ? null : f.name), t(!1);
+                    s(B ? null : M.name), t(!1);
                   },
-                  className: D ? "bg-primary/10 font-medium" : "",
+                  className: B ? "bg-primary/10 font-medium" : "",
                   children: [
-                    D && /* @__PURE__ */ T.jsx("span", { className: "mr-2 text-green-400", children: /* @__PURE__ */ T.jsx(Lb, { className: "h-4 w-4" }) }),
+                    B && /* @__PURE__ */ T.jsx("span", { className: "mr-2 text-green-400", children: /* @__PURE__ */ T.jsx(Lb, { className: "h-4 w-4" }) }),
                     /* @__PURE__ */ T.jsxs("div", { className: "flex flex-col flex-1", children: [
-                      /* @__PURE__ */ T.jsx("span", { children: f.name }),
+                      /* @__PURE__ */ T.jsx("span", { children: M.name }),
                       /* @__PURE__ */ T.jsxs("span", { className: "text-xs text-muted-foreground", children: [
-                        f.ContinuousConfig.Source,
+                        M.ContinuousConfig.Source,
                         " · [",
-                        f.ContinuousConfig.Min.toFixed(2),
+                        M.ContinuousConfig.Min.toFixed(2),
                         ",",
                         " ",
-                        f.ContinuousConfig.Max.toFixed(2),
+                        M.ContinuousConfig.Max.toFixed(2),
                         "]"
                       ] })
                     ] })
                   ]
                 },
-                f.name
+                M.name
               );
             }) })
           ] })
