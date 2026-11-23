@@ -31,39 +31,6 @@ def _split_values(values: list[str] | None) -> list[str] | None:
     return [item for item in result if item]
 
 
-def _infer_position(adata: Any) -> str:
-    preferred = ("spatial", "X_spatial", "position", "coordinates")
-    for key in preferred:
-        if key in adata.obsm and getattr(adata.obsm[key], "ndim", 0) == 2:
-            if adata.obsm[key].shape[1] in (2, 3):
-                return key
-    for key, value in adata.obsm.items():
-        if getattr(value, "ndim", 0) == 2 and value.shape[1] in (2, 3):
-            return str(key)
-    raise ValueError(
-        "Could not infer spatial coordinates. Pass --position with a 2D/3D adata.obsm key."
-    )
-
-
-def _infer_color(adata: Any) -> str:
-    preferred = ("celltype", "cell_type", "annotation", "leiden", "cluster")
-    for key in preferred:
-        if key in adata.obs:
-            return key
-    for key in adata.obs.columns:
-        column = adata.obs[key]
-        if str(column.dtype) in ("category", "object", "string"):
-            return str(key)
-        try:
-            if 1 < int(column.nunique(dropna=True)) <= 100:
-                return str(key)
-        except Exception:
-            continue
-    raise ValueError(
-        "Could not infer a categorical annotation. Pass --color with an adata.obs key."
-    )
-
-
 def _widget_payload(widget: Any) -> tuple[dict[str, Any], dict[str, bytes]]:
     binaries: dict[str, bytes] = {"laz": bytes(widget.laz_bytes)}
     annotation_urls: dict[str, str] = {}
@@ -102,7 +69,7 @@ def _make_handler(manifest: dict[str, Any], binaries: dict[str, bytes]):
             self.end_headers()
             self.wfile.write(body)
 
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             path = unquote(urlparse(self.path).path)
             if path in ("/", "/index.html"):
                 self._send(200, _INDEX_HTML.encode(), "text/html; charset=utf-8")
@@ -115,7 +82,10 @@ def _make_handler(manifest: dict[str, Any], binaries: dict[str, bytes]):
                     self._send(404, b"Not found", "text/plain")
                 else:
                     self._send(200, body, "application/octet-stream")
-            elif path == "/assets/spatialvista_standalone.mjs" and asset_bytes is not None:
+            elif (
+                path == "/assets/spatialvista_standalone.mjs"
+                and asset_bytes is not None
+            ):
                 self._send(200, asset_bytes, "text/javascript; charset=utf-8")
             else:
                 content_type = mimetypes.guess_type(path)[0] or "text/plain"
@@ -135,17 +105,38 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", "-i", type=Path, help="Input .h5ad file")
     parser.add_argument("--position", help="Spatial coordinate key in adata.obsm")
     parser.add_argument("--color", help="Default categorical key in adata.obs")
-    parser.add_argument("--section", help="Section/slice key in adata.obs")
-    parser.add_argument("--annotations", action="append", help="Extra obs keys (comma-separated)")
-    parser.add_argument("--continuous", action="append", help="Continuous obs keys (comma-separated)")
-    parser.add_argument("--genes", action="append", help="Genes to include (comma-separated)")
+    parser.add_argument(
+        "--section", help="Section/slice key (auto-detected; empty string disables)"
+    )
+    parser.add_argument(
+        "--annotations",
+        action="append",
+        help="Annotation keys (auto-detected; comma-separated; empty string disables extras)",
+    )
+    parser.add_argument(
+        "--continuous",
+        action="append",
+        help="Numeric obs keys (auto-detected; comma-separated; empty string disables)",
+    )
+    parser.add_argument(
+        "--ignore-gsmap-metadata",
+        action="store_true",
+        help="Ignore uns['gsmap'] and use ordinary field discovery",
+    )
+    parser.add_argument(
+        "--genes", action="append", help="Genes to include (comma-separated)"
+    )
     parser.add_argument("--layer", help="Expression layer used with --genes")
     parser.add_argument("--mode", choices=("2D", "3D"), default="3D")
     parser.add_argument("--height", type=int, default=800)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--no-browser", action="store_true", help="Do not open a browser automatically")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument(
+        "--no-browser", action="store_true", help="Do not open a browser automatically"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     return parser
 
 
@@ -164,26 +155,30 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Loading {input_path} ...", flush=True)
     adata = ad.read_h5ad(input_path)
-    position = args.position or _infer_position(adata)
-    color = args.color or _infer_color(adata)
-    widget = vis(
-        adata,
-        position=position,
-        color=color,
-        section=args.section,
-        annotations=_split_values(args.annotations),
-        continuous=_split_values(args.continuous),
-        genes=_split_values(args.genes),
-        layer=args.layer,
-        height=args.height,
-        mode=args.mode,
-        _wait_for_all_sends=True,
-    )
+    try:
+        widget = vis(
+            adata,
+            position=args.position,
+            color=args.color,
+            section=args.section,
+            annotations=_split_values(args.annotations),
+            continuous=_split_values(args.continuous),
+            genes=_split_values(args.genes),
+            layer=args.layer,
+            height=args.height,
+            mode=args.mode,
+            ignore_gsmap_metadata=args.ignore_gsmap_metadata,
+            _wait_for_all_sends=True,
+        )
+    except (ValueError, KeyError, TypeError) as error:
+        parser.error(str(error))
     manifest, binaries = _widget_payload(widget)
-    server = ThreadingHTTPServer((args.host, args.port), _make_handler(manifest, binaries))
+    server = ThreadingHTTPServer(
+        (args.host, args.port), _make_handler(manifest, binaries)
+    )
     url = f"http://{args.host}:{server.server_port}"
     print(f"SpatialVista is running at {url}")
-    print(f"Using position={position!r}, color={color!r}. Press Ctrl+C to stop.")
+    print("Press Ctrl+C to stop.")
     if not args.no_browser:
         threading.Timer(0.25, webbrowser.open, args=(url,)).start()
     try:

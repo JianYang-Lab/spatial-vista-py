@@ -17,9 +17,11 @@ interface AppHeaderProps {
   lassoEnabled: boolean;
   canLasso: boolean;
   selectedCount: number;
+  hasTraits: boolean;
 
   // Handlers
   onContinuousOpen: () => void;
+  onTraitsOpen: () => void;
   onToggleView: () => void;
   onCapture: () => void;
   onLassoToggle: () => void;
@@ -33,7 +35,9 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
   lassoEnabled,
   canLasso,
   selectedCount,
+  hasTraits,
   onContinuousOpen,
+  onTraitsOpen,
   onToggleView,
   onCapture,
   onLassoToggle,
@@ -44,6 +48,17 @@ export const VisHeader: React.FC<AppHeaderProps> = ({
       <div className="flex items-center justify-between gap-2">
         {/* left button group */}
         <div className="flex items-center gap-1 sm:gap-10 flex-1 min-w-0">
+          {hasTraits && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onTraitsOpen}
+              disabled={!isLoaded}
+            >
+              <SearchIcon className="h-4 w-4" />
+              <span className="ml-1">Query Traits</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

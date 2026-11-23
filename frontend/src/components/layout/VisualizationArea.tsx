@@ -24,6 +24,15 @@ import {
   type ScreenPoint,
 } from "@/utils/lassoSelection";
 
+const escapeTooltip = (value: unknown) =>
+  String(value).replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        char
+      ] ?? char,
+  );
+
 interface VisualizationAreaProps {
   // Basic states
   isLoaded: boolean;
@@ -297,7 +306,7 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
           const displayName =
             annoType.charAt(0).toUpperCase() + annoType.slice(1);
 
-          tooltipContent += `<b>${displayName}:</b> ${label}<br/>`;
+          tooltipContent += `<b>${escapeTooltip(displayName)}:</b> ${escapeTooltip(label)}<br/>`;
         }
       }
 
@@ -309,7 +318,9 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
         const v = extData.numeric.values[index];
 
         if (typeof v === "number" && Number.isFinite(v)) {
-          tooltipContent += `<b>${extData.numeric.name}:</b> ${v.toFixed(
+          const config = extData.numeric.ContinuousConfig;
+          const name = `${config.Label ?? extData.numeric.name}${config.Unit ? ` · ${config.Unit}` : ""}`;
+          tooltipContent += `<b>${escapeTooltip(name)}:</b> ${v.toFixed(
             4,
           )}<br/>`;
         }
@@ -335,7 +346,10 @@ export const VisualizationArea: React.FC<VisualizationAreaProps> = ({
     }
   }, [minMaxValue, onNumericThresholdChange]);
 
-  const numericName = loadedData?.extData?.numeric?.name ?? null;
+  const field = loadedData?.extData?.numeric;
+  const numericName = field
+    ? `${field.ContinuousConfig.Label ?? field.name}${field.ContinuousConfig.Unit ? ` · ${field.ContinuousConfig.Unit}` : ""}`
+    : null;
 
   return (
     <>
@@ -504,11 +518,11 @@ const LogpControls: React.FC<LogpControlsProps> = ({
       {/* Slider positioned over the gradient bar */}
       <Slider
         min={minMaxLogp[0]}
-        max={minMaxLogp[1]}
-        step={(minMaxLogp[1] - minMaxLogp[0]) / 100}
+        max={minMaxLogp[1] > minMaxLogp[0] ? minMaxLogp[1] : minMaxLogp[0] + 1}
+        step={(minMaxLogp[1] - minMaxLogp[0]) / 100 || 0.01}
         value={[NumericThreshold]}
         onValueChange={(values) => onThresholdChange(values[0])}
-        disabled={!isLoaded}
+        disabled={!isLoaded || minMaxLogp[0] === minMaxLogp[1]}
         className="
             cursor-pointer absolute inset-0
             [&>[data-slot=slider-track]]:bg-transparent

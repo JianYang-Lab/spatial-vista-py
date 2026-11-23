@@ -91,6 +91,7 @@ nav:
   - Home: index.md
   - Quick Start: quickstart.md
   - Command Line: cli.md
+  - gsMap Traits: gsmap.md
   - Controls: controls.md
   - API Reference: api/index.md
   - FAQ: faq.md

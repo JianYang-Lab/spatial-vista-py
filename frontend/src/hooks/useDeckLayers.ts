@@ -85,7 +85,7 @@ export const useDeckLayers = ({
           },
           updateTriggers: {
             getColor: [
-              numericField?.name,
+              numericField,
               NumericThreshold,
               colorParams.hiddenCategoryIds,
               colorParams.customColors,
@@ -145,11 +145,11 @@ export const useDeckLayers = ({
 
           getFilterValue: (index: number) => {
             const extData = loadedData.extData;
-            if (!extData?.logPs) return NumericThreshold + 1;
-            return extData.logPs[index];
+            const value = extData?.numeric?.values[index];
+            return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
           },
 
-          filterRange: [NumericThreshold, minMaxValue?.[1] || 100],
+          filterRange: [NumericThreshold, minMaxValue?.[1] ?? 100],
           filterTransformColor: true,
           filterTransformSize: true,
           filterEnabled: !!numericField,
@@ -184,8 +184,9 @@ export const useDeckLayers = ({
           },
 
           updateTriggers: {
+            getFilterValue: [numericField],
             getFillColor: [
-              numericField?.name,
+              numericField,
               NumericThreshold,
               colorParams.hiddenCategoryIds,
               colorParams.customColors,

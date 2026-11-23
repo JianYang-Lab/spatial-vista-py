@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><title>Late widget data test</title></head>
+<body style="margin:0"><div id="widget"></div>
+<script type="module">
+import widget from "/widget-test.mjs";
+const manifest = await (await fetch("/api/manifest")).json();
+const bytes = async (url) => new Uint8Array(await (await fetch(url)).arrayBuffer());
+const readBins = async (urls) => Object.fromEntries(await Promise.all(
+    Object.entries(urls).map(async ([key, url]) => [key, await bytes(url)])
+));
+const values = {global_config: manifest.global_config, selected_cells: {}};
+const listeners = new Map();
+const model = {
+    get(key) { return values[key]; },
+    set(key, value) {
+        values[key] = value;
+        listeners.get("change:" + key)?.forEach((fn) => fn());
+    },
+    on(event, fn) {
+        if (!listeners.has(event)) listeners.set(event, new Set());
+        listeners.get(event).add(fn);
+    },
+    off(event, fn) { listeners.get(event)?.delete(fn); },
+    save_changes() {},
+};
+widget.render({el: document.getElementById("widget"), model});
+window.deliverAnnotationData = async () => {
+    model.set("annotation_config", manifest.annotation_config);
+    model.set("annotation_bins", await readBins(manifest.annotation_urls));
+    model.set("laz_bytes", await bytes(manifest.laz_url));
+};
+window.deliverTraitData = async () => {
+    model.set("continuous_config", manifest.continuous_config);
+    // Binary data can arrive separately from the metadata in a notebook.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    model.set("continuous_bins", await readBins(manifest.continuous_urls));
+};
+window.widgetTestReady = true;
+</script></body></html>
