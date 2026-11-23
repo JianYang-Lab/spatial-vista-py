@@ -7,7 +7,10 @@ import pytest
 
 from spatialvista import vis
 from spatialvista.discovery import resolve_fields, validate_gsmap
-from spatialvista.exporter import export_annotations_blob, export_continuous_obs_blob
+from spatialvista.exporter import (
+    export_annotations_blob,
+    export_continuous_obs_blob,
+)
 
 
 @pytest.fixture
@@ -157,7 +160,9 @@ def test_empty_selection_overrides_metadata(data):
         data, annotations=[], continuous=[], section="", color="section"
     )
     assert (
-        fields.annotations == [] and fields.continuous == [] and fields.section is None
+        fields.annotations == []
+        and fields.continuous == []
+        and fields.section is None
     )
     widget = vis(data, continuous=[], _wait_for_all_sends=True)
     try:
@@ -184,7 +189,8 @@ def test_no_annotations_does_not_modify_data(data):
     try:
         key = widget.annotation_config["DefaultAnnoType"]
         assert (
-            widget.annotation_config["AnnoMaps"][key]["Items"][0]["Name"] == "All cells"
+            widget.annotation_config["AnnoMaps"][key]["Items"][0]["Name"]
+            == "All cells"
         )
         pd.testing.assert_frame_equal(data.obs, before)
     finally:
@@ -192,7 +198,9 @@ def test_no_annotations_does_not_modify_data(data):
 
 
 def test_large_unique_strings_not_auto_annotations():
-    data = ad.AnnData(obs=pd.DataFrame({"barcode": [f"id_{i}" for i in range(100)]}))
+    data = ad.AnnData(
+        obs=pd.DataFrame({"barcode": [f"id_{i}" for i in range(100)]})
+    )
     data.obsm["spatial"] = np.ones((100, 3))
     assert resolve_fields(data).annotations == []
 

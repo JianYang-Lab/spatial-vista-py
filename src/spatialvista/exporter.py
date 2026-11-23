@@ -25,7 +25,9 @@ def write_bin(array, path):
         size = path.stat().st_size
     except Exception:
         size = None
-    logger.info("write_bin: wrote {} bytes to {} in {:.3f}", size, path, duration)
+    logger.info(
+        "write_bin: wrote {} bytes to {} in {:.3f}", size, path, duration
+    )
 
 
 def name_to_rgb(name: str) -> tuple[int, int, int]:
@@ -65,10 +67,16 @@ def write_laz(adata, position_key, path, mode: str = "3D"):
 
     # Handle 2D coordinates: add z dimension if needed
     if coords.shape[1] == 2:
-        logger.debug(f"Adding z dimension for 2D coordinates (shape={coords.shape})")
-        coords = np.hstack((coords, np.zeros((coords.shape[0], 1), dtype=np.float64)))
+        logger.debug(
+            f"Adding z dimension for 2D coordinates (shape={coords.shape})"
+        )
+        coords = np.hstack(
+            (coords, np.zeros((coords.shape[0], 1), dtype=np.float64))
+        )
     elif coords.shape[1] != 3:
-        raise ValueError(f"Expected 2 or 3 spatial dimensions, got {coords.shape[1]}")
+        raise ValueError(
+            f"Expected 2 or 3 spatial dimensions, got {coords.shape[1]}"
+        )
 
     x = coords[:, 0].astype(np.float64)
     y = coords[:, 1].astype(np.float64)
@@ -149,14 +157,18 @@ def export_annotations_blob(
     if slice_key is not None:
         annotations = [slice_key] + annotations
     all_annos = list(
-        dict.fromkeys(([color_key] if color_key is not None else []) + annotations)
+        dict.fromkeys(
+            ([color_key] if color_key is not None else []) + annotations
+        )
     )
 
     logger.info(
         "export_annotations_blob: starting export for region_key={}, annotations={}, n_obs={}",
         color_key,
         annotations,
-        getattr(adata, "n_obs", len(adata.obs)) if hasattr(adata, "obs") else None,
+        getattr(adata, "n_obs", len(adata.obs))
+        if hasattr(adata, "obs")
+        else None,
     )
 
     anno_maps = {}
@@ -233,10 +245,14 @@ def export_annotations_blob(
         while color_key in adata.obs:
             color_key += "_"
         all_annos.insert(0, color_key)
-        anno_bins[color_key] = np.zeros(len(adata.obs), dtype=np.uint8).tobytes()
+        anno_bins[color_key] = np.zeros(
+            len(adata.obs), dtype=np.uint8
+        ).tobytes()
         anno_dtypes[color_key] = "uint8"
         anno_maps[color_key] = {
-            "Items": [{"Name": "All cells", "Code": 0, "Color": [125, 165, 190]}]
+            "Items": [
+                {"Name": "All cells", "Code": 0, "Color": [125, 165, 190]}
+            ]
         }
     config = {
         "Id": str(uuid.uuid4()),
@@ -275,7 +291,9 @@ def export_continuous_obs_blob(
     logger.info(
         "export_continuous_obs_blob: starting export for keys={} n_obs={}",
         keys,
-        getattr(adata, "n_obs", len(adata.obs)) if hasattr(adata, "obs") else None,
+        getattr(adata, "n_obs", len(adata.obs))
+        if hasattr(adata, "obs")
+        else None,
     )
 
     for key in keys:

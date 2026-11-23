@@ -73,7 +73,9 @@ def _async_set_trait_and_send(
             dur,
         )
     except Exception as e:
-        logger.exception("async_send: failed to send trait='{}': {}", trait_name, e)
+        logger.exception(
+            "async_send: failed to send trait='{}': {}", trait_name, e
+        )
 
 
 def vis(
@@ -192,7 +194,9 @@ def vis(
 
     w = SpatialVistaWidget()
     n_obs_value = getattr(adata, "n_obs", None)
-    n_obs = int(n_obs_value if n_obs_value is not None else len(adata.obsm[position]))
+    n_obs = int(
+        n_obs_value if n_obs_value is not None else len(adata.obsm[position])
+    )
     w.set_cell_ids(_cell_ids_from_adata(adata, n_obs))
     w.set_alignment_source(adata, position, section)
 
@@ -211,7 +215,9 @@ def vis(
         }
     }
     futures.append(
-        executor.submit(_async_set_trait_and_send, w, "global_config", global_cfg)
+        executor.submit(
+            _async_set_trait_and_send, w, "global_config", global_cfg
+        )
     )
     logger.info("vis: dispatched async send for global_config: {}", global_cfg)
 
@@ -229,7 +235,9 @@ def vis(
     futures.append(
         executor.submit(_async_set_trait_and_send, w, "laz_bytes", laz_bytes)
     )
-    logger.info("vis: dispatched async send for laz_bytes ({} bytes)", len(laz_bytes))
+    logger.info(
+        "vis: dispatched async send for laz_bytes ({} bytes)", len(laz_bytes)
+    )
 
     # --- categorical annotations ---
     t0 = _now()
@@ -240,7 +248,9 @@ def vis(
         annotations,
     )
     t_ann = _now() - t0
-    total_anno_bytes = sum(len(b) for b in anno_bins.values()) if anno_bins else 0
+    total_anno_bytes = (
+        sum(len(b) for b in anno_bins.values()) if anno_bins else 0
+    )
     logger.info(
         "vis: export_annotations_blob produced {} bins total_bytes={} in {:.3f}s",
         len(anno_bins),
@@ -250,10 +260,14 @@ def vis(
 
     # dispatch annotation config and bins asynchronously
     futures.append(
-        executor.submit(_async_set_trait_and_send, w, "annotation_config", anno_config)
+        executor.submit(
+            _async_set_trait_and_send, w, "annotation_config", anno_config
+        )
     )
     futures.append(
-        executor.submit(_async_set_trait_and_send, w, "annotation_bins", anno_bins)
+        executor.submit(
+            _async_set_trait_and_send, w, "annotation_bins", anno_bins
+        )
     )
     logger.info(
         "vis: dispatched async send for annotation_config and annotation_bins ({} bytes)",
@@ -272,7 +286,9 @@ def vis(
             trait_labels=(fields.gsmap or {}).get("traits"),
         )
         t_cont = _now() - t0
-        cont_obs_bytes = sum(len(b) for b in cont_bins.values()) if cont_bins else 0
+        cont_obs_bytes = (
+            sum(len(b) for b in cont_bins.values()) if cont_bins else 0
+        )
         logger.info(
             "vis: export_continuous_obs_blob produced {} bins total_bytes={} in {:.3f}s",
             len(cont_bins),
@@ -287,7 +303,9 @@ def vis(
             )
         )
         futures.append(
-            executor.submit(_async_set_trait_and_send, w, "continuous_bins", cont_bins)
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_bins", cont_bins
+            )
         )
         logger.info(
             "vis: dispatched async send for continuous_config and continuous_bins ({} bytes)",
@@ -298,7 +316,9 @@ def vis(
     gene_bytes = 0
     if genes:
         t0 = _now()
-        gene_traits, gene_bins = export_continuous_gene_blob(adata, genes, layer=layer)
+        gene_traits, gene_bins = export_continuous_gene_blob(
+            adata, genes, layer=layer
+        )
         t_genes = _now() - t0
         cont_traits.update(gene_traits)
         cont_bins.update(gene_bins)
@@ -316,7 +336,9 @@ def vis(
             )
         )
         futures.append(
-            executor.submit(_async_set_trait_and_send, w, "continuous_bins", cont_bins)
+            executor.submit(
+                _async_set_trait_and_send, w, "continuous_bins", cont_bins
+            )
         )
         logger.info(
             "vis: dispatched async send for updated continuous_config/continuous_bins ({} bytes)",
@@ -340,7 +362,9 @@ def vis(
     executor.shutdown(wait=False)
 
     total_time = _now() - start_total
-    total_bytes = len(laz_bytes) + total_anno_bytes + cont_obs_bytes + gene_bytes
+    total_bytes = (
+        len(laz_bytes) + total_anno_bytes + cont_obs_bytes + gene_bytes
+    )
     logger.info(
         "vis: finished (dispatch phase) total_bytes={} total_time={:.3f}s background_tasks={}",
         total_bytes,

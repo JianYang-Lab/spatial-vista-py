@@ -12,7 +12,9 @@ from ._logger import logger
 
 
 def _names(value, label):
-    if isinstance(value, str) or not isinstance(value, (list, tuple, np.ndarray)):
+    if isinstance(value, str) or not isinstance(
+        value, (list, tuple, np.ndarray)
+    ):
         raise ValueError(f"{label} must be a list of column names")
     if isinstance(value, np.ndarray) and value.ndim != 1:
         raise ValueError(f"{label} must be a one-dimensional list")
@@ -61,7 +63,9 @@ def validate_gsmap(adata):
         )
     position = meta.get("spatial_key")
     if not isinstance(position, str) or position not in adata.obsm:
-        raise ValueError(f"gsMap spatial_key {position!r} does not exist in obsm")
+        raise ValueError(
+            f"gsMap spatial_key {position!r} does not exist in obsm"
+        )
     coords = np.asarray(adata.obsm[position])
     if coords.shape != (len(adata.obs), 3):
         raise ValueError("gsMap spatial coordinates must have shape (n_obs, 3)")
@@ -70,17 +74,23 @@ def validate_gsmap(adata):
         or np.iscomplexobj(coords)
         or not np.isfinite(coords).all()
     ):
-        raise ValueError("gsMap spatial coordinates must be finite real numbers")
+        raise ValueError(
+            "gsMap spatial coordinates must be finite real numbers"
+        )
     if (
         not adata.obs.index.is_unique
         or adata.obs.index.hasnans
         or "" in adata.obs.index
     ):
-        raise ValueError("gsMap spot IDs must be unique, nonempty and non-missing")
+        raise ValueError(
+            "gsMap spot IDs must be unique, nonempty and non-missing"
+        )
     annotations = _names(meta.get("annotation_keys"), "gsMap annotation_keys")
     for key in annotations:
         _obs_key(adata, key, "gsMap annotation_keys")
-    color = _obs_key(adata, meta.get("default_annotation"), "gsMap default_annotation")
+    color = _obs_key(
+        adata, meta.get("default_annotation"), "gsMap default_annotation"
+    )
     if color not in annotations:
         raise ValueError("gsMap default_annotation must be in annotation_keys")
     section = meta.get("section_key")
@@ -135,11 +145,15 @@ def infer_position(adata):
 def infer_annotations(adata):
     keys = []
     for key, column in adata.obs.items():
-        if isinstance(column.dtype, pd.CategoricalDtype) or is_bool_dtype(column.dtype):
+        if isinstance(column.dtype, pd.CategoricalDtype) or is_bool_dtype(
+            column.dtype
+        ):
             keys.append(key)
         elif str(column.dtype) in ("object", "string", "str"):
             # Do not turn spot IDs or free text into enormous category menus.
-            if column.nunique(dropna=True) <= min(1000, max(20, len(column) // 5)):
+            if column.nunique(dropna=True) <= min(
+                1000, max(20, len(column) // 5)
+            ):
                 keys.append(key)
     return keys
 
@@ -262,4 +276,6 @@ def resolve_fields(
     logger.info(
         f"Resolved position={position!r}, color={color!r}, section={section!r}; {len(annotations)} annotations, {len(continuous)} numeric fields; gsMap={meta is not None}"
     )
-    return ResolvedFields(position, color, section, annotations, continuous, meta)
+    return ResolvedFields(
+        position, color, section, annotations, continuous, meta
+    )
